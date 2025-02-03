@@ -17,6 +17,11 @@ This GitHub repository is inteded to serve as a central location for information
 
 |Role|Volunteer|Contact|
 |--|--|--|
-|aaaa|bb|
-|aaaa|bb|
-|aaaa|bb|
+|Lift Master|Joe K5MGY||
+|Launch Mechanic|Alice KI1TEN||
+|Media Coordinator|Nick K5NJM||
+|Public Information Officer|Chip KD4C||
+|Payload Coordinator|Eric KJ5DIF||
+|Flight Dynamics Officer|TBD||
+|RF Coordinator|TBD||
+|Pastry Procurement|Andrew KE5GDB||
