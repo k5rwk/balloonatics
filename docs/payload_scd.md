@@ -1,4 +1,4 @@
-## Exempt Flights
+## FAA Part 101 Exempt Flights
 
 Our flights are operated are exempt from FAA Part 101.  We achieve this by adhering to the following payload rules:
 - Carries a payload package that weighs more than four pounds and has a weight/size ratio of more than three ounces per square inch on any surface of the package, determined by dividing the total weight in ounces of the payload package by the area in square inches of its smallest surface;
