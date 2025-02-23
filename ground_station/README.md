@@ -99,7 +99,7 @@ cd balloonatics/ground_station
 
 At this point it is necessary to change the default callsigns in the configuration files to your callsign. 
 
-`nano horusdemodlib/user.cfg` at line 7
+`nano horusdemodlib/user.cfg` at line 7. Leave lat/lon at (0.0, 0.0) if you are using Chasemapper with a GPS!
 
 `nano docker-compose.yml` in the wenet section, approximately line 100
 
