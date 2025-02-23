@@ -4,6 +4,7 @@ services:
   ka9q-radio:
     #build: https://github.com/snh/dockerfiles.git#main:ka9q-radio
     build: ./ka9q-radio
+    restart: 'always'
     cap_add:
       - CAP_NET_ADMIN
       - CAP_SYS_NICE
@@ -11,7 +12,6 @@ services:
     devices:
       - "/dev/bus/usb:/dev/bus/usb"
     network_mode: host
-    restart: always
     tty: true
     volumes:
       - ./ka9q-radio/radiod.conf:/etc/radio/radiod.conf:ro
@@ -21,6 +21,7 @@ services:
 
   chasemapper: 
     image: ghcr.io/projecthorus/chasemapper:latest
+    restart: 'always'
     devices:
       - "/dev/ttyACM0:/dev/ttyUSB0"
     volumes:
@@ -38,6 +39,7 @@ services:
   horus-432630:
     image: ghcr.io/ke5gdb/horusdemodlib:testing
     #image: horusdemodlib
+    restart: 'always'
     environment:
       # Change this to match the PCM device defined in 
       SDR_DEVICE: rtl-sdr-pcm.local
@@ -67,6 +69,7 @@ services:
   horus-432500:
     image: ghcr.io/ke5gdb/horusdemodlib:testing
     # image: horusdemodlib
+    restart: 'always'
     environment:
       # Change this to match the PCM device defined in 
       SDR_DEVICE: rtl-sdr-pcm.local
@@ -95,6 +98,7 @@ services:
   wenet-431500:
     #image: ghcr.io/projecthorus/wenet:latest
     image: ghcr.io/ke5gdb/wenet:testing
+    restart: 'always'
     environment:
       MYCALL: CHANGEME
       RXFREQ: 431500000

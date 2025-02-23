@@ -44,7 +44,9 @@ A list of usable power supplies or battery banks has been provided below. These 
 
 ### OS Preparation 
 
-Update your apt repositories and upgrade to the latest version of the software with these commands:
+Using [Raspberry Pi Imager](https://www.raspberrypi.com/software/) (or similar), load Raspberry Pi OS **64-bit** to your SD card. If you intend to connect a local display and mouse/keyboard to the Pi, use the default image (*~1.2GB*). If you intend to operate headless, the `Raspberry Pi OS Lite (64-bit)` version will work best. 
+
+Once the Pi is booted and you are logged in via SSH, update your apt repositories and upgrade to the latest version of the software with these commands:
 
 ```console
 sudo apt update
@@ -97,7 +99,7 @@ cd balloonatics/ground_station
 
 At this point it is necessary to change the default callsigns in the configuration files to your callsign. 
 
-`nano horusdemodlib/user.cfg` at line 7
+`nano horusdemodlib/user.cfg` at line 7. Leave lat/lon at (0.0, 0.0) if you are using Chasemapper with a GPS!
 
 `nano docker-compose.yml` in the wenet section, approximately line 100
 
