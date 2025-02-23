@@ -44,7 +44,9 @@ A list of usable power supplies or battery banks has been provided below. These 
 
 ### OS Preparation 
 
-Update your apt repositories and upgrade to the latest version of the software with these commands:
+Using [Raspberry Pi Imager](https://www.raspberrypi.com/software/) (or similar), load Raspberry Pi OS **64-bit** to your SD card. If you intend to connect a local display and mouse/keyboard to the Pi, use the default image (*~1.2GB*). If you intend to operate headless, the `Raspberry Pi OS Lite (64-bit)` version will work best. 
+
+Once the Pi is booted and you are logged in via SSH, update your apt repositories and upgrade to the latest version of the software with these commands:
 
 ```console
 sudo apt update
