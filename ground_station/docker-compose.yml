@@ -19,6 +19,22 @@ services:
       - ./ka9q-radio/wisdom:/var/lib/ka9q-radio/wisdom
       - /var/run/dbus:/var/run/dbus
 
+  chasemapper: 
+    image: ghcr.io/projecthorus/chasemapper:latest
+    devices:
+      - "/dev/ttyACM0:/dev/ttyUSB0"
+    volumes:
+      - type: 'bind'
+        source: './chasemapper/horusmapper.cfg'
+        target: '/opt/chasemapper/horusmapper.cfg'
+      - type: 'bind'
+        source: './chasemapper/log_files/'
+        target: '/opt/chasemapper/log_files/'
+      - type: 'bind'
+        source: './chasemapper/gfs/'
+        target: '/opt/chasemapper/gfs/'
+    network_mode: 'host'
+
   horus-432630:
     image: ghcr.io/ke5gdb/horusdemodlib:testing
     #image: horusdemodlib
@@ -81,7 +97,7 @@ services:
     image: ghcr.io/ke5gdb/wenet:testing
     #image: wenet
     environment:
-      MYCALL: KE5GDB
+      MYCALL: CHANGEME
       RXFREQ: 431500000
       DEVICE: 'wenet-1-pcm.local'
       BAUD_RATE: 115200
@@ -98,17 +114,4 @@ services:
       - type: 'bind'
         source: '/var/run/avahi-daemon/socket'
         target: '/var/run/avahi-daemon/socket'
-    network_mode: 'host'
-
-  chasemapper: 
-    image: ghcr.io/projecthorus/chasemapper:latest
-    devices:
-      - "/dev/ttyACM0:/dev/ttyUSB0"
-    volumes:
-      - type: 'bind'
-        source: './chasemapper/horusmapper.cfg'
-        target: '/opt/chasemapper/horusmapper.cfg'
-      - type: 'bind'
-        source: './chasemapper/log_files/'
-        target: '/opt/chasemapper/log_files/'
     network_mode: 'host'
