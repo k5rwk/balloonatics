@@ -95,7 +95,6 @@ services:
   wenet-431500:
     #image: ghcr.io/projecthorus/wenet:latest
     image: ghcr.io/ke5gdb/wenet:testing
-    #image: wenet
     environment:
       MYCALL: CHANGEME
       RXFREQ: 431500000

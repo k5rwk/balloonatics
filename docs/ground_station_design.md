@@ -1,6 +1,19 @@
 # Ground Station
 
-To receive the resident payloads on the RAB balloons, a reference design is provided for you to build your own ground station. The key components are an RTL-SDR, a Rasbperry Pi, and a piece of software called ka9q-radio.
+To receive the resident payloads on the RAB balloons, a reference design is provided for you to build your own ground station. The key components are an RTL-SDR, a Raspberry Pi, and a piece of software called ka9q-radio.
+
+When complete, this ground station will be capable of receiving 2MHz of spectrum in real-time, and running numerous slice receivers within that bandwidth. 
+
+The features included in this reference design are:
+
+|Software|Description|Access|Status|
+|-|-|-|-|
+|[Chasemapper](https://github.com/projecthorus/chasemapper)|Local mapping and path prediction web GUI|http://chasepi:5001/|Working|
+|[KA9Q-Radio](https://github.com/ka9q/ka9q-radio)|Multi-slice receiver software|N/A|Working|
+|[HorusDemodLib](https://github.com/projecthorus/horusdemodlib/)|Horus Binary v2 decoder, similar to HorusGUI, but CLI|Chasemapper + http://amateur.sondehub.org/|Working|
+|[Wenet](https://github.com/projecthorus/wenet/)|Digital image reception and decoding|http://chasepi:5003/ + http://ssdv.habhub.org/|Broken -- WIP|
+|SlowRX SSTV|SSTV image reception|TBD|WIP|
+
 
 ## Bill of Materials
 
@@ -27,11 +40,16 @@ A list of usable power supplies or battery banks has been provided below. These 
 |[Vilros 10000mAh Portable PSU](https://vilros.com/products/10-000mah-portable-power-supply-for-raspberry-pi)|:heavy_check_mark:|Runs Pi 5, m.2 SSD|N2VIP|
 
 
-## Work in Process 
-
-The stuff below this line is still WIP. Stay tuned!
-
 ## Software Configuration
+
+### OS Preparation 
+
+Update your apt repositories and upgrade to the latest version of the software with these commands:
+
+```console
+sudo apt update
+sudo apt dist-upgrade
+```
 
 ### Docker Installation
 
@@ -42,35 +60,79 @@ curl -fsSL https://get.docker.com -o get-docker.sh
 sudo sh get-docker.sh
 
 sudo usermod -aG docker $(whoami)
-```
 
-### KA9Q-Radio Installation
-
-The multi-slice receiver software used for this configuration is [ka9q-radio](https://github.com/ka9q/ka9q-radio/blob/main/docs/INSTALL.md).
-
-Install these packages via `apt`:
-
-```console
-sudo apt update
-sudo apt upgrade
-sudo apt install avahi-utils build-essential make gcc libairspy-dev libairspyhf-dev libavahi-client-dev libbsd-dev libfftw3-dev libhackrf-dev libiniparser-dev libncurses5-dev libopus-dev librtlsdr-dev libusb-1.0-0-dev libusb-dev portaudio19-dev libasound2-dev uuid-dev rsync libogg-dev libsamplerate-dev libliquid-dev libncursesw5-dev
-```
-
-Download and install [ka9q-radio](https://github.com/ka9q/ka9q-radio/blob/main/docs/INSTALL.md):
-
-```console
-git clone https://github.com/ka9q/ka9q-radio.git
-cd ka9q-radio
-make -f Makefile.linux
-sudo make -f Makefile.linux install
+sudo reboot
 ```
 
 ### RTL-SDR Installation
 
-Use these commands to install the proper utilities for the RTL-SDR.
+Use these commands to install the proper utilities for the RTL-SDR. The `rtl-sdr` package will only be used for configuration and testing purposes, but is useful to have installed.
 
 ```console
 echo 'blacklist dvb_usb_rtl28xxu' | sudo tee /etc/modprobe.d/blacklist-dvb_usb_rtl28xxu.conf
 sudo modprobe -r dvb_usb_rtl28xxu
+
+sudo apt install rtl-sdr
 ```
 
+To prevent ambiguities with multiple RTL-SDRs, it may be useful to configure the serial number field in each EEPROM to something unique. The serial field may contain ASCII characters, so something descriptive such as `BalloonRX` or `VHF_SDR`. 
+
+You may use `rtl_eeprom` to list the available RTL-SDR devices. 
+
+```console
+rtl_eeprom -d 0 -s BalloonRX
+```
+
+Change the `-d 0` to the appropriate device number if multiple are connected. 
+
+### Ground Station Configuration
+
+As part of the reference design, a default configuration for the ground station has been created. This configuration uses `docker compose` to orchestrate multiple containers that all serve an important role in the ground station. 
+
+```console
+cd ~
+git clone -b ground_station https://github.com/k5rwk/balloonatics.git
+cd balloonatics/ground_station
+```
+
+At this point it is necessary to change the default callsigns in the configuration files to your callsign. 
+
+`nano horusdemodlib/user.cfg` at line 7
+
+`nano docker-compose.yml` in the wenet section, approximately line 100
+
+## Running the Software
+
+From the `~/balloonatics/ground_station/` directory, run:
+
+```console
+docker compose up
+```
+
+Verify the various services have been started as expected. When you are ready to launch this as a background task, exit out using `Ctrl + C`, and then run:
+
+```console
+docker compose up -d
+```
+
+Within the `docker-compose.yml` file, there are `restart: 'always'` flags for each container that will auto-start each container on boot.
+
+### Other Useful Docker Compose Commands
+
+Watch logs:
+
+```console
+docker compose logs --follow
+```
+
+Stop all containers:
+
+```console
+docker compose down
+```
+
+Launch bash shell inside container:
+
+```console 
+docker compose exec chasemapper bash
+```
