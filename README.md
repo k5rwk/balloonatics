@@ -1,6 +1,6 @@
 # Welcome
 
-This GitHub repository is inteded to serve as a central location for information regarding the Richardson Area Balloonatics launches.
+This GitHub repository is intended to serve as a central location for information regarding the Richardson Area Balloonatics launches.
 
 ### Index
 
@@ -10,7 +10,7 @@ This GitHub repository is inteded to serve as a central location for information
         * Wenet + Slow-Scan TV
     2. [Payload Specifications ("SCD")](docs/payload_scd.md)
 2. Ground Station
-    * [Reference Design](docs/ground_station_design.md)
+    * [Reference Design](ground_station/README.md)
 
 ### Meet the Team 
 
