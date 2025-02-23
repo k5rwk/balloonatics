@@ -1,0 +1,7 @@
+*.log
+*.wav
+*.pyc
+*venv*
+wisdom
+wisdomf
+ground_station/chasemapper/gfs/*
