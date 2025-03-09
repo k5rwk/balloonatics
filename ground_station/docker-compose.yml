@@ -1,3 +1,6 @@
+x-common-variables: &common-variables
+  MYCALL: CHANGEME
+
 services:
 
   # ka9q-radio SDR service
@@ -19,7 +22,7 @@ services:
       - ./ka9q-radio/wisdom:/var/lib/ka9q-radio/wisdom
       - /var/run/dbus:/var/run/dbus
 
-  chasemapper: 
+  chasemapper:
     image: ghcr.io/projecthorus/chasemapper:latest
     restart: 'always'
     devices:
@@ -36,71 +39,12 @@ services:
         target: '/opt/chasemapper/gfs/'
     network_mode: 'host'
 
-  horus-432630:
-    image: ghcr.io/ke5gdb/horusdemodlib:testing
-    #image: horusdemodlib
-    restart: 'always'
-    environment:
-      # Change this to match the PCM device defined in 
-      SDR_DEVICE: rtl-sdr-pcm.local
-      STATS_OUTPUT: 0
-      DECODER: horus_demod
-      DEMODSCRIPT: "docker_ka9q_single.sh"
-      # Receive *centre* frequency, in Hz
-      # Note: The SDR will be tuned to RXBANDWIDTH/2 below this frequency.
-      RXFREQ: 432630000
-      # Frequency estimator bandwidth. The wider the bandwidth, the more drift and frequency error the modem can tolerate,
-      # but the higher the chance that the modem will lock on to a strong spurious signal.
-      # Note: The SDR will be tuned to RXFREQ-RXBANDWIDTH/2, and the estimator set to look at 0-RXBANDWIDTH Hz. (RTL-SDR only)
-      RXBANDWIDTH: 10000
-    command: 'bash -c $${DEMODSCRIPT}'
-    volumes:
-      - type: 'tmpfs'
-        target: '/tmp'
-      - type: 'bind'
-        source: './horusdemodlib/user.cfg'
-        target: '/user.cfg'
-      - type: 'bind'
-        source: '/var/run/avahi-daemon/socket'
-        target: '/var/run/avahi-daemon/socket'
-    network_mode: 'host'
-
-  # Receiver instance name (e.g. "horus-434200" or "wenet-443500")
-  horus-432500:
-    image: ghcr.io/ke5gdb/horusdemodlib:testing
-    # image: horusdemodlib
-    restart: 'always'
-    environment:
-      # Change this to match the PCM device defined in 
-      SDR_DEVICE: rtl-sdr-pcm.local
-      STATS_OUTPUT: 0
-      DECODER: horus_demod
-      DEMODSCRIPT: "docker_ka9q_single.sh"
-      # Receive *centre* frequency, in Hz
-      # Note: The SDR will be tuned to RXBANDWIDTH/2 below this frequency.
-      RXFREQ: 432500000
-      # Frequency estimator bandwidth. The wider the bandwidth, the more drift and frequency error the modem can tolerate,
-      # but the higher the chance that the modem will lock on to a strong spurious signal.
-      # Note: The SDR will be tuned to RXFREQ-RXBANDWIDTH/2, and the estimator set to look at 0-RXBANDWIDTH Hz. (RTL-SDR only)
-      RXBANDWIDTH: 10000
-    command: 'bash -c $${DEMODSCRIPT}'
-    volumes:
-      - type: 'tmpfs'
-        target: '/tmp'
-      - type: 'bind'
-        source: './horusdemodlib/user.cfg'
-        target: '/user.cfg'
-      - type: 'bind'
-        source: '/var/run/avahi-daemon/socket'
-        target: '/var/run/avahi-daemon/socket'
-    network_mode: 'host'
-
   wenet-431500:
     #image: ghcr.io/projecthorus/wenet:latest
     image: ghcr.io/ke5gdb/wenet:testing
     restart: 'always'
     environment:
-      MYCALL: CHANGEME
+      <<: *common-variables
       RXFREQ: 431500000
       DEVICE: 'wenet-1-pcm.local'
       BAUD_RATE: 115200
@@ -118,3 +62,116 @@ services:
         source: '/var/run/avahi-daemon/socket'
         target: '/var/run/avahi-daemon/socket'
     network_mode: 'host'
+
+  # Receiver instance name (e.g. "horus-434200" or "wenet-443500")
+  horus-432600:
+    image: ghcr.io/ke5gdb/horusdemodlib:testing
+    # image: horusdemodlib
+    restart: 'always'
+    environment:
+      # Change this to match the PCM device defined in 
+      SDR_DEVICE: rtl-sdr-pcm.local
+      STATS_OUTPUT: 0
+      DECODER: horus_demod
+      DEMODSCRIPT: "docker_ka9q_single.sh"
+      # Receive *centre* frequency, in Hz
+      RXFREQ: 432600000
+      # Frequency estimator bandwidth. The wider the bandwidth, the more drift and frequency error the modem can tolerate,
+      # but the higher the chance that the modem will lock on to a strong spurious signal.
+      RXBANDWIDTH: 10000
+    command: 'bash -c $${DEMODSCRIPT}'
+    volumes:
+      - type: 'tmpfs'
+        target: '/tmp'
+      - type: 'bind'
+        source: './horusdemodlib/user.cfg'
+        target: '/user.cfg'
+      - type: 'bind'
+        source: '/var/run/avahi-daemon/socket'
+        target: '/var/run/avahi-daemon/socket'
+    network_mode: 'host'
+
+  # Receiver instance name (e.g. "horus-434200" or "wenet-443500")
+  horus-432700:
+    image: ghcr.io/ke5gdb/horusdemodlib:testing
+    # image: horusdemodlib
+    restart: 'always'
+    environment:
+      # Change this to match the PCM device defined in 
+      SDR_DEVICE: rtl-sdr-pcm.local
+      STATS_OUTPUT: 0
+      DECODER: horus_demod
+      DEMODSCRIPT: "docker_ka9q_single.sh"
+      # Receive *centre* frequency, in Hz
+      RXFREQ: 432700000
+      # Frequency estimator bandwidth. The wider the bandwidth, the more drift and frequency error the modem can tolerate,
+      # but the higher the chance that the modem will lock on to a strong spurious signal.
+      RXBANDWIDTH: 10000
+    command: 'bash -c $${DEMODSCRIPT}'
+    volumes:
+      - type: 'tmpfs'
+        target: '/tmp'
+      - type: 'bind'
+        source: './horusdemodlib/user.cfg'
+        target: '/user.cfg'
+      - type: 'bind'
+        source: '/var/run/avahi-daemon/socket'
+        target: '/var/run/avahi-daemon/socket'
+    network_mode: 'host'
+
+  # Receiver instance name (e.g. "horus-434200" or "wenet-443500")
+  horus-432800:
+    image: ghcr.io/ke5gdb/horusdemodlib:testing
+    # image: horusdemodlib
+    restart: 'always'
+    environment:
+      # Change this to match the PCM device defined in 
+      SDR_DEVICE: rtl-sdr-pcm.local
+      STATS_OUTPUT: 0
+      DECODER: horus_demod
+      DEMODSCRIPT: "docker_ka9q_single.sh"
+      # Receive *centre* frequency, in Hz
+      RXFREQ: 432800000
+      # Frequency estimator bandwidth. The wider the bandwidth, the more drift and frequency error the modem can tolerate,
+      # but the higher the chance that the modem will lock on to a strong spurious signal.
+      RXBANDWIDTH: 10000
+    command: 'bash -c $${DEMODSCRIPT}'
+    volumes:
+      - type: 'tmpfs'
+        target: '/tmp'
+      - type: 'bind'
+        source: './horusdemodlib/user.cfg'
+        target: '/user.cfg'
+      - type: 'bind'
+        source: '/var/run/avahi-daemon/socket'
+        target: '/var/run/avahi-daemon/socket'
+    network_mode: 'host'
+
+  # Receiver instance name (e.g. "horus-434200" or "wenet-443500")
+  horus-432900:
+    image: ghcr.io/ke5gdb/horusdemodlib:testing
+    # image: horusdemodlib
+    restart: 'always'
+    environment:
+      # Change this to match the PCM device defined in 
+      SDR_DEVICE: rtl-sdr-pcm.local
+      STATS_OUTPUT: 0
+      DECODER: horus_demod
+      DEMODSCRIPT: "docker_ka9q_single.sh"
+      # Receive *centre* frequency, in Hz
+      RXFREQ: 432900000
+      # Frequency estimator bandwidth. The wider the bandwidth, the more drift and frequency error the modem can tolerate,
+      # but the higher the chance that the modem will lock on to a strong spurious signal.
+      RXBANDWIDTH: 10000
+    command: 'bash -c $${DEMODSCRIPT}'
+    volumes:
+      - type: 'tmpfs'
+        target: '/tmp'
+      - type: 'bind'
+        source: './horusdemodlib/user.cfg'
+        target: '/user.cfg'
+      - type: 'bind'
+        source: '/var/run/avahi-daemon/socket'
+        target: '/var/run/avahi-daemon/socket'
+    network_mode: 'host'
+
