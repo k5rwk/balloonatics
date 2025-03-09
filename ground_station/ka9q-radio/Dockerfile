@@ -4,7 +4,8 @@
 FROM debian:bookworm-slim AS build
 
 # ka9q-radio git ref to use
-ARG REF=refs/heads/main
+#ARG REF=refs/heads/main
+ARG REF=a81d2ee057080f544ccb7d3176eb4944f111f283
 
 # Install necessary packages for building the application
 RUN apt-get update && \
