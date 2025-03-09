@@ -138,3 +138,13 @@ Launch bash shell inside container:
 ```console 
 docker compose exec chasemapper bash
 ```
+
+### Updating Flight Configuration
+
+The simplest way to update the flight configuration is to stash any previous configuration changes, then pull the latest configuration from GitHub. When this is complete, you will need to update your callsign per the instructions above. 
+
+```console
+cd ~/balloonatics/ground_station
+git stash
+git pull
+```
