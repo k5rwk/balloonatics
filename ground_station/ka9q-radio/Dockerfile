@@ -12,7 +12,8 @@ RUN apt-get update && \
     apt-get install -y --no-install-recommends \
     avahi-utils \
     build-essential \
-    gcc \
+    make \
+    cmake \
     git \
     libairspy-dev \
     libairspyhf-dev \
@@ -26,17 +27,27 @@ RUN apt-get update && \
     libncursesw5-dev \
     libogg-dev \
     libopus-dev \
-    librtlsdr-dev \
     libsamplerate0-dev \
     libusb-1.0-0-dev \
     libusb-dev \
-    make \
     portaudio19-dev \
     rsync \
     time \
     unzip \
     uuid-dev \
     && rm -rf /var/lib/apt/lists/*
+
+#RUN git clone https://github.com/steve-m/librtlsdr.git /tmp/librtlsdr && \
+ADD https://github.com/steve-m/librtlsdr/archive/refs/heads/master.zip /tmp/librtlsdr.zip
+RUN unzip /tmp/librtlsdr.zip -d /tmp && \
+  mkdir -p /tmp/librtlsdr-master/build && \
+  cd /tmp/librtlsdr-master/build && \
+  cmake -Wno-dev ../ && \
+  make && \
+  make install && \
+  ls -alR /usr/local/lib/* && \
+  rm -rf /tmp/librtlsdr-master
+
 
 # Download the source code into the build container
 ADD https://github.com/ka9q/ka9q-radio/archive/$REF.zip /tmp/ka9q-radio.zip
@@ -73,7 +84,6 @@ RUN apt-get update && \
     libopus0 \
     libportaudio2 \
     libsamplerate0 \
-    rtl-sdr \
     tini && \
     rm -rf /var/lib/apt/lists/*
 
@@ -106,6 +116,10 @@ COPY --from=build \
 
 # Copy shared resources from the build stage
 COPY --from=build /src/share /usr/local/share/ka9q-radio
+
+# Copy rtl-sdr from the build container.
+COPY --from=build /usr/local/lib /usr/local/lib
+RUN ldconfig
 
 RUN echo "[wenet] \n\
         # Raw quadrature (I/Q) output, usually for further demodulation \n\
