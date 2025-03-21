@@ -11,7 +11,7 @@ The features included in this reference design are:
 |[Chasemapper](https://github.com/projecthorus/chasemapper)|Local mapping and path prediction web GUI|http://chasepi:5001/|Working|
 |[KA9Q-Radio](https://github.com/ka9q/ka9q-radio)|Multi-slice receiver software|N/A|Working|
 |[HorusDemodLib](https://github.com/projecthorus/horusdemodlib/)|Horus Binary v2 decoder, similar to HorusGUI, but CLI|Chasemapper + http://amateur.sondehub.org/|Working|
-|[Wenet](https://github.com/projecthorus/wenet/)|Digital image reception and decoding|http://chasepi:5003/ + http://ssdv.habhub.org/|Broken -- WIP|
+|[Wenet](https://github.com/projecthorus/wenet/)|Digital image reception and decoding|http://chasepi:5003/ + http://ssdv.habhub.org/|Working|
 |SlowRX SSTV|SSTV image reception|TBD|WIP|
 
 
