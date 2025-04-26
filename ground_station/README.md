@@ -128,6 +128,8 @@ docker compose up -d
 
 Within the `docker-compose.yml` file, there are `restart: 'always'` flags for each container that will auto-start each container on boot.
 
+See the table at the top of this page for URLs to access the respective user interfaces. You will need to change `chasepi` to your respective hostname. 
+
 ### Other Useful Docker Compose Commands
 
 Watch logs:
