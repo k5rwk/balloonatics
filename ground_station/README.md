@@ -11,7 +11,8 @@ The features included in this reference design are:
 |[Chasemapper](https://github.com/projecthorus/chasemapper)|Local mapping and path prediction web GUI|http://chasepi:5001/|Working|
 |[KA9Q-Radio](https://github.com/ka9q/ka9q-radio)|Multi-slice receiver software|N/A|Working|
 |[HorusDemodLib](https://github.com/projecthorus/horusdemodlib/)|Horus Binary v2 decoder, similar to HorusGUI, but CLI|Chasemapper + http://amateur.sondehub.org/|Working|
-|[Wenet](https://github.com/projecthorus/wenet/)|Digital image reception and decoding|http://chasepi:5003/ + http://ssdv.habhub.org/|Broken -- WIP|
+|[Wenet](https://github.com/projecthorus/wenet/)|Digital image reception and decoding|http://chasepi:5003/ + http://ssdv.habhub.org/|Working|
+|[MapTilesDownloader](https://github.com/Moll1989/MapTilesDownloader)|Local Map Caching|http://chasepi:5001/|Working|
 |SlowRX SSTV|SSTV image reception|TBD|WIP|
 
 
@@ -101,7 +102,15 @@ At this point it is necessary to change the default callsigns in the configurati
 
 `nano horusdemodlib/user.cfg` at line 7. Leave lat/lon at (0.0, 0.0) if you are using Chasemapper with a GPS!
 
-`nano docker-compose.yml` in the wenet section, approximately line 100
+`nano docker-compose.yml` at the top of the file.
+
+**IF A GPS IS NOT CONNECTED TO YOUR RASPBERRY PI, FOLLOW THESE STEPS:**
+
+`nano chasemapper/horusmapper.cfg` change `car_source_type` at line 38 to `none`.
+
+`nano docker-compose.yml` comment out lines 28 and 29 (#). These lines include `devices:` and `- "/dev/ttyACM0:/dev/ttyUSB0"`. Your container will not run if a GPS is not present. 
+
+Define lat and lon in `horusdemodlib/user.cfg`.
 
 ## Running the Software
 
@@ -118,6 +127,8 @@ docker compose up -d
 ```
 
 Within the `docker-compose.yml` file, there are `restart: 'always'` flags for each container that will auto-start each container on boot.
+
+See the table at the top of this page for URLs to access the respective user interfaces. You will need to change `chasepi` to your respective hostname. 
 
 ### Other Useful Docker Compose Commands
 
@@ -141,7 +152,7 @@ docker compose exec chasemapper bash
 
 ### Updating Flight Configuration
 
-The simplest way to update the flight configuration is to stash any previous configuration changes, then pull the latest configuration from GitHub. When this is complete, you will need to update your callsign per the instructions above. 
+The simplest way to update the flight configuration is to stash any previous configuration changes, then pull the latest configuration from GitHub. When this is complete, you will need to update your configuration per the instructions above. 
 
 ```console
 cd ~/balloonatics/ground_station
