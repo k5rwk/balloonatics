@@ -3,3 +3,4 @@
 *.pyc
 *venv*
 ground_station/chasemapper/gfs/*
+ground_station/maps/

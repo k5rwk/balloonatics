@@ -37,7 +37,18 @@ services:
       - type: 'bind'
         source: './chasemapper/gfs/'
         target: '/opt/chasemapper/gfs/'
+      - type: 'bind'
+        source: './maps/'
+        target: '/opt/chasemapper/Maps/'
     network_mode: 'host'
+
+  maptilesdownloader:
+    image: ghcr.io/ke5gdb/maptilesdownloader:testing
+    restart: 'always'
+    network_mode: host
+    tty: true
+    volumes:
+      - ./maps/:/opt/MapTilesDownloader/output/
 
   wenet-431500:
     #image: ghcr.io/projecthorus/wenet:latest
@@ -65,7 +76,7 @@ services:
 
   # Receiver instance name (e.g. "horus-434200" or "wenet-443500")
   horus-432600:
-    image: ghcr.io/ke5gdb/horusdemodlib:testing
+    image: ghcr.io/projecthorus/horusdemodlib
     # image: horusdemodlib
     restart: 'always'
     environment:
@@ -93,7 +104,7 @@ services:
 
   # Receiver instance name (e.g. "horus-434200" or "wenet-443500")
   horus-432700:
-    image: ghcr.io/ke5gdb/horusdemodlib:testing
+    image: ghcr.io/projecthorus/horusdemodlib
     # image: horusdemodlib
     restart: 'always'
     environment:
@@ -121,7 +132,7 @@ services:
 
   # Receiver instance name (e.g. "horus-434200" or "wenet-443500")
   horus-432800:
-    image: ghcr.io/ke5gdb/horusdemodlib:testing
+    image: ghcr.io/projecthorus/horusdemodlib
     # image: horusdemodlib
     restart: 'always'
     environment:
@@ -149,7 +160,7 @@ services:
 
   # Receiver instance name (e.g. "horus-434200" or "wenet-443500")
   horus-432900:
-    image: ghcr.io/ke5gdb/horusdemodlib:testing
+    image: ghcr.io/projecthorus/horusdemodlib
     # image: horusdemodlib
     restart: 'always'
     environment:
@@ -174,4 +185,3 @@ services:
         source: '/var/run/avahi-daemon/socket'
         target: '/var/run/avahi-daemon/socket'
     network_mode: 'host'
-
