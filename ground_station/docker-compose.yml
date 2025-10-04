@@ -58,12 +58,13 @@ services:
       <<: *common-variables
       RXFREQ: 431500000
       DEVICE: 'wenet-1-pcm.local'
-      BAUD_RATE: 115200
+      BAUD_RATE: 96000
       OVERSAMPLING: 8
+      FRAMING_MODE: 'wenet_ldpc'
       UDP_PORT: 55673
       IMAGE_PORT: 7890
       WEB_PORT: 5003
-      SDR_TYPE: KA9Q
+      SDR_TYPE: 'KA9Q'
       UPLOAD_ENABLE: 1
     volumes:
       - type: 'bind'
