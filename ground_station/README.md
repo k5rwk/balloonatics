@@ -172,6 +172,9 @@ git checkout main
 # Apply your personal settings
 git stash pop
 
+# Grab the latest docker images
+docker compose pull
+
 # Start the receivers
 docker compose up -d
 ```
