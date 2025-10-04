@@ -152,10 +152,11 @@ docker compose exec chasemapper bash
 
 ### Updating Flight Configuration
 
-The simplest way to update the flight configuration is to stash any previous configuration changes, then pull the latest configuration from GitHub. When this is complete, you will need to update your configuration per the instructions above. 
+The simplest way to update the flight configuration is to stash any previous configuration changes, then pull the latest configuration from GitHub. When this is complete, you should verify the changes you previously made to the configuration files (callsign, etc.).
 
 ```console
 cd ~/balloonatics/ground_station
 git stash
 git pull
+git stash pop
 ```
