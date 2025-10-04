@@ -94,7 +94,7 @@ As part of the reference design, a default configuration for the ground station 
 
 ```console
 cd ~
-git clone -b ground_station https://github.com/k5rwk/balloonatics.git
+git clone https://github.com/k5rwk/balloonatics.git
 cd balloonatics/ground_station
 ```
 
