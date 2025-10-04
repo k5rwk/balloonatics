@@ -156,7 +156,22 @@ The simplest way to update the flight configuration is to stash any previous con
 
 ```console
 cd ~/balloonatics/ground_station
+
+# Stop receiving processes
+docker compose down
+
+# Save your personal changes (callsign, GPS settings, etc.)
 git stash
+
+# Update from GitHub
 git pull
+
+# Only required if previously using ground_station branch
+git checkout main
+
+# Apply your personal settings
 git stash pop
+
+# Start the receivers
+docker compose up -d
 ```
