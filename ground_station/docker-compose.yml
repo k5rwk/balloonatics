@@ -59,7 +59,7 @@ services:
       RXFREQ: 431500000
       DEVICE: 'wenet-1-pcm.local'
       BAUD_RATE: 96000
-      OVERSAMPLING: 8
+      OVERSAMPLING: 10
       FRAMING_MODE: 'wenet_ldpc'
       UDP_PORT: 55673
       IMAGE_PORT: 7890
