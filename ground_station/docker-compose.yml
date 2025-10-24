@@ -59,7 +59,7 @@ services:
       RXFREQ: 431500000
       DEVICE: 'wenet-1-pcm.local'
       BAUD_RATE: 96000
-      OVERSAMPLING: 10
+      OVERSAMPLING: 5
       FRAMING_MODE: 'wenet_ldpc'
       UDP_PORT: 55673
       IMAGE_PORT: 7890
@@ -74,6 +74,13 @@ services:
         source: '/var/run/avahi-daemon/socket'
         target: '/var/run/avahi-daemon/socket'
     network_mode: 'host'
+
+  wenet_forwarder:
+    build: ./wenet_forwarder
+    restart: 'unless-stopped'
+    network_mode: 'host'
+    environment:
+      <<: *common-variables
     
   # Receiver instance name (e.g. "horus-434200" or "wenet-443500")
   horus-432600:
@@ -88,34 +95,6 @@ services:
       DEMODSCRIPT: "docker_ka9q_single.sh"
       # Receive *centre* frequency, in Hz
       RXFREQ: 432600000
-      # Frequency estimator bandwidth. The wider the bandwidth, the more drift and frequency error the modem can tolerate,
-      # but the higher the chance that the modem will lock on to a strong spurious signal.
-      RXBANDWIDTH: 10000
-    command: 'bash -c $${DEMODSCRIPT}'
-    volumes:
-      - type: 'tmpfs'
-        target: '/tmp'
-      - type: 'bind'
-        source: './horusdemodlib/user.cfg'
-        target: '/user.cfg'
-      - type: 'bind'
-        source: '/var/run/avahi-daemon/socket'
-        target: '/var/run/avahi-daemon/socket'
-    network_mode: 'host'
-
-  # Receiver instance name (e.g. "horus-434200" or "wenet-443500")
-  horus-432625:
-    image: ghcr.io/projecthorus/horusdemodlib
-    # image: horusdemodlib
-    restart: 'always'
-    environment:
-      # Change this to match the PCM device defined in 
-      SDR_DEVICE: rtl-sdr-pcm.local
-      STATS_OUTPUT: 0
-      DECODER: horus_demod
-      DEMODSCRIPT: "docker_ka9q_single.sh"
-      # Receive *centre* frequency, in Hz
-      RXFREQ: 432625000
       # Frequency estimator bandwidth. The wider the bandwidth, the more drift and frequency error the modem can tolerate,
       # but the higher the chance that the modem will lock on to a strong spurious signal.
       RXBANDWIDTH: 10000
