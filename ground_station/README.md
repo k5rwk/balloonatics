@@ -2,6 +2,8 @@
 
 To receive the resident payloads on the RAB balloons, a reference design is provided for you to build your own ground station. The key components are an RTL-SDR, a Raspberry Pi, and a piece of software called ka9q-radio.
 
+**THIS BRANCH HAS BEEN CREATED SPECIFICALLY FOR GPSL 2026! See `docker-compose.yml` for exact frequency assignments**
+
 When complete, this ground station will be capable of receiving 2MHz of spectrum in real-time, and running numerous slice receivers within that bandwidth. 
 
 The features included in this reference design are:
@@ -94,7 +96,7 @@ As part of the reference design, a default configuration for the ground station 
 
 ```console
 cd ~
-git clone https://github.com/k5rwk/balloonatics.git
+git clone https://github.com/k5rwk/balloonatics.git -b gpsl
 cd balloonatics/ground_station
 ```
 
@@ -104,13 +106,11 @@ At this point it is necessary to change the default callsigns in the configurati
 
 `nano docker-compose.yml` at the top of the file.
 
-**IF A GPS IS NOT CONNECTED TO YOUR RASPBERRY PI, FOLLOW THESE STEPS:**
+**IF A GPS IS CONNECTED TO YOUR RASPBERRY PI, FOLLOW THESE STEPS:**
 
-`nano chasemapper/horusmapper.cfg` change `car_source_type` at line 38 to `none`.
+`nano chasemapper/horusmapper.cfg` change `car_source_type` at line 38 to `serial`.
 
-`nano docker-compose.yml` comment out lines 28 and 29 (#). These lines include `devices:` and `- "/dev/ttyACM0:/dev/ttyUSB0"`. Your container will not run if a GPS is not present. 
-
-Define lat and lon in `horusdemodlib/user.cfg`.
+`nano docker-compose.yml` uncomment lines 28 and 29 (#). These lines include `devices:` and `- "/dev/ttyACM0:/dev/ttyUSB0"`. If these lines are uncommented, your container will not run if a GPS is not present. 
 
 ## Running the Software
 
@@ -165,9 +165,6 @@ git stash
 
 # Update from GitHub
 git pull
-
-# Only required if previously using ground_station branch
-git checkout main
 
 # Apply your personal settings
 git stash pop
