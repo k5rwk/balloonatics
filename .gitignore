@@ -3,4 +3,4 @@
 *.pyc
 *venv*
 ground_station/chasemapper/gfs/*
-ground_station/maps/
+ground_station/maps/./rtl-aprs-igate
