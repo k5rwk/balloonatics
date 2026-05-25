@@ -50,13 +50,13 @@ services:
     volumes:
       - ./maps/:/opt/MapTilesDownloader/output/
 
-  wenet-431250:
+  wenet-431200:
     #image: ghcr.io/projecthorus/wenet:latest
     image: ghcr.io/ke5gdb/wenet:testing
     restart: 'always'
     environment:
       <<: *common-variables
-      RXFREQ: 431250000
+      RXFREQ: 431200000
       DEVICE: 'wenet-1-pcm.local'
       BAUD_RATE: 96000
       OVERSAMPLING: 5
@@ -75,13 +75,13 @@ services:
         target: '/var/run/avahi-daemon/socket'
     network_mode: 'host'
 
-  wenet-431750:
+  wenet-431500:
     #image: ghcr.io/projecthorus/wenet:latest
     image: ghcr.io/ke5gdb/wenet:testing
     restart: 'always'
     environment:
       <<: *common-variables
-      RXFREQ: 431750000
+      RXFREQ: 431500000
       DEVICE: 'wenet-2-pcm.local'
       BAUD_RATE: 96000
       OVERSAMPLING: 5
@@ -94,6 +94,31 @@ services:
     volumes:
       - type: 'bind'
         source: './wenet-2/rx_images/'
+        target: '/opt/wenet/rx_images/'
+      - type: 'bind'
+        source: '/var/run/avahi-daemon/socket'
+        target: '/var/run/avahi-daemon/socket'
+    network_mode: 'host'
+
+  wenet-431800:
+    #image: ghcr.io/projecthorus/wenet:latest
+    image: ghcr.io/ke5gdb/wenet:testing
+    restart: 'always'
+    environment:
+      <<: *common-variables
+      RXFREQ: 431800000
+      DEVICE: 'wenet-3-pcm.local'
+      BAUD_RATE: 96000
+      OVERSAMPLING: 5
+      FRAMING_MODE: 'wenet_ldpc'
+      UDP_PORT: 55672
+      IMAGE_PORT: 7890
+      WEB_PORT: 5005
+      SDR_TYPE: 'KA9Q'
+      UPLOAD_ENABLE: 1
+    volumes:
+      - type: 'bind'
+        source: './wenet-3/rx_images/'
         target: '/opt/wenet/rx_images/'
       - type: 'bind'
         source: '/var/run/avahi-daemon/socket'
