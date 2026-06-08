@@ -167,7 +167,7 @@ services:
       RXFREQ: 432500000
       # Frequency estimator bandwidth. The wider the bandwidth, the more drift and frequency error the modem can tolerate,
       # but the higher the chance that the modem will lock on to a strong spurious signal.
-      RXBANDWIDTH: 10000
+      RXBANDWIDTH: 20000
     command: 'bash -c $${DEMODSCRIPT}'
     volumes:
       - type: 'tmpfs'
@@ -193,7 +193,7 @@ services:
       DECODER: horus_demod
       DEMODSCRIPT: "docker_ka9q_single.sh"
       RXFREQ: 432520000
-      RXBANDWIDTH: 10000
+      RXBANDWIDTH: 20000
     command: 'bash -c $${DEMODSCRIPT}'
     volumes:
       - type: 'tmpfs'
@@ -219,7 +219,7 @@ services:
       DECODER: horus_demod
       DEMODSCRIPT: "docker_ka9q_single.sh"
       RXFREQ: 432540000
-      RXBANDWIDTH: 10000
+      RXBANDWIDTH: 20000
     command: 'bash -c $${DEMODSCRIPT}'
     volumes:
       - type: 'tmpfs'
@@ -245,7 +245,7 @@ services:
       DECODER: horus_demod
       DEMODSCRIPT: "docker_ka9q_single.sh"
       RXFREQ: 432560000
-      RXBANDWIDTH: 10000
+      RXBANDWIDTH: 20000
     command: 'bash -c $${DEMODSCRIPT}'
     volumes:
       - type: 'tmpfs'
@@ -271,7 +271,7 @@ services:
       DECODER: horus_demod
       DEMODSCRIPT: "docker_ka9q_single.sh"
       RXFREQ: 432580000
-      RXBANDWIDTH: 10000
+      RXBANDWIDTH: 20000
     command: 'bash -c $${DEMODSCRIPT}'
     volumes:
       - type: 'tmpfs'
@@ -297,7 +297,7 @@ services:
       DECODER: horus_demod
       DEMODSCRIPT: "docker_ka9q_single.sh"
       RXFREQ: 432600000
-      RXBANDWIDTH: 10000
+      RXBANDWIDTH: 20000
     command: 'bash -c $${DEMODSCRIPT}'
     volumes:
       - type: 'tmpfs'
@@ -323,7 +323,7 @@ services:
       DECODER: horus_demod
       DEMODSCRIPT: "docker_ka9q_single.sh"
       RXFREQ: 432620000
-      RXBANDWIDTH: 10000
+      RXBANDWIDTH: 20000
     command: 'bash -c $${DEMODSCRIPT}'
     volumes:
       - type: 'tmpfs'
@@ -349,7 +349,7 @@ services:
       DECODER: horus_demod
       DEMODSCRIPT: "docker_ka9q_single.sh"
       RXFREQ: 432640000
-      RXBANDWIDTH: 10000
+      RXBANDWIDTH: 20000
     command: 'bash -c $${DEMODSCRIPT}'
     volumes:
       - type: 'tmpfs'
@@ -375,7 +375,7 @@ services:
       DECODER: horus_demod
       DEMODSCRIPT: "docker_ka9q_single.sh"
       RXFREQ: 432660000
-      RXBANDWIDTH: 10000
+      RXBANDWIDTH: 20000
     command: 'bash -c $${DEMODSCRIPT}'
     volumes:
       - type: 'tmpfs'
@@ -401,7 +401,7 @@ services:
       DECODER: horus_demod
       DEMODSCRIPT: "docker_ka9q_single.sh"
       RXFREQ: 432680000
-      RXBANDWIDTH: 10000
+      RXBANDWIDTH: 20000
     command: 'bash -c $${DEMODSCRIPT}'
     volumes:
       - type: 'tmpfs'
@@ -427,7 +427,7 @@ services:
       DECODER: horus_demod
       DEMODSCRIPT: "docker_ka9q_single.sh"
       RXFREQ: 432700000
-      RXBANDWIDTH: 10000
+      RXBANDWIDTH: 20000
     command: 'bash -c $${DEMODSCRIPT}'
     volumes:
       - type: 'tmpfs'
@@ -453,7 +453,7 @@ services:
       DECODER: horus_demod
       DEMODSCRIPT: "docker_ka9q_single.sh"
       RXFREQ: 432720000
-      RXBANDWIDTH: 10000
+      RXBANDWIDTH: 20000
     command: 'bash -c $${DEMODSCRIPT}'
     volumes:
       - type: 'tmpfs'
@@ -479,7 +479,7 @@ services:
       DECODER: horus_demod
       DEMODSCRIPT: "docker_ka9q_single.sh"
       RXFREQ: 432740000
-      RXBANDWIDTH: 10000
+      RXBANDWIDTH: 20000
     command: 'bash -c $${DEMODSCRIPT}'
     volumes:
       - type: 'tmpfs'
@@ -505,7 +505,7 @@ services:
       DECODER: horus_demod
       DEMODSCRIPT: "docker_ka9q_single.sh"
       RXFREQ: 432760000
-      RXBANDWIDTH: 10000
+      RXBANDWIDTH: 20000
     command: 'bash -c $${DEMODSCRIPT}'
     volumes:
       - type: 'tmpfs'
@@ -531,7 +531,7 @@ services:
       DECODER: horus_demod
       DEMODSCRIPT: "docker_ka9q_single.sh"
       RXFREQ: 432780000
-      RXBANDWIDTH: 10000
+      RXBANDWIDTH: 20000
     command: 'bash -c $${DEMODSCRIPT}'
     volumes:
       - type: 'tmpfs'
@@ -557,7 +557,7 @@ services:
       DECODER: horus_demod
       DEMODSCRIPT: "docker_ka9q_single.sh"
       RXFREQ: 432800000
-      RXBANDWIDTH: 10000
+      RXBANDWIDTH: 20000
     command: 'bash -c $${DEMODSCRIPT}'
     volumes:
       - type: 'tmpfs'
@@ -576,7 +576,6 @@ services:
 
   horus-432820:
     image: ghcr.io/projecthorus/horusdemodlib
-    profiles: ["extra"]
     restart: 'always'
     environment:
       SDR_DEVICE: rtl-sdr-pcm.local
@@ -584,7 +583,7 @@ services:
       DECODER: horus_demod
       DEMODSCRIPT: "docker_ka9q_single.sh"
       RXFREQ: 432820000
-      RXBANDWIDTH: 10000
+      RXBANDWIDTH: 20000
     command: 'bash -c $${DEMODSCRIPT}'
     volumes:
       - type: 'tmpfs'
@@ -603,7 +602,6 @@ services:
 
   horus-432840:
     image: ghcr.io/projecthorus/horusdemodlib
-    profiles: ["extra"]
     restart: 'always'
     environment:
       SDR_DEVICE: rtl-sdr-pcm.local
@@ -611,7 +609,7 @@ services:
       DECODER: horus_demod
       DEMODSCRIPT: "docker_ka9q_single.sh"
       RXFREQ: 432840000
-      RXBANDWIDTH: 10000
+      RXBANDWIDTH: 20000
     command: 'bash -c $${DEMODSCRIPT}'
     volumes:
       - type: 'tmpfs'
@@ -630,7 +628,6 @@ services:
 
   horus-432860:
     image: ghcr.io/projecthorus/horusdemodlib
-    profiles: ["extra"]
     restart: 'always'
     environment:
       SDR_DEVICE: rtl-sdr-pcm.local
@@ -638,7 +635,7 @@ services:
       DECODER: horus_demod
       DEMODSCRIPT: "docker_ka9q_single.sh"
       RXFREQ: 432860000
-      RXBANDWIDTH: 10000
+      RXBANDWIDTH: 20000
     command: 'bash -c $${DEMODSCRIPT}'
     volumes:
       - type: 'tmpfs'
@@ -657,7 +654,6 @@ services:
 
   horus-432880:
     image: ghcr.io/projecthorus/horusdemodlib
-    profiles: ["extra"]
     restart: 'always'
     environment:
       SDR_DEVICE: rtl-sdr-pcm.local
@@ -665,7 +661,7 @@ services:
       DECODER: horus_demod
       DEMODSCRIPT: "docker_ka9q_single.sh"
       RXFREQ: 432880000
-      RXBANDWIDTH: 10000
+      RXBANDWIDTH: 20000
     command: 'bash -c $${DEMODSCRIPT}'
     volumes:
       - type: 'tmpfs'
@@ -691,7 +687,7 @@ services:
       DECODER: horus_demod
       DEMODSCRIPT: "docker_ka9q_single.sh"
       RXFREQ: 432900000
-      RXBANDWIDTH: 10000
+      RXBANDWIDTH: 20000
     command: 'bash -c $${DEMODSCRIPT}'
     volumes:
       - type: 'tmpfs'
@@ -710,7 +706,6 @@ services:
 
   horus-432920:
     image: ghcr.io/projecthorus/horusdemodlib
-    profiles: ["extra"]
     restart: 'always'
     environment:
       SDR_DEVICE: rtl-sdr-pcm.local
@@ -718,7 +713,7 @@ services:
       DECODER: horus_demod
       DEMODSCRIPT: "docker_ka9q_single.sh"
       RXFREQ: 432920000
-      RXBANDWIDTH: 10000
+      RXBANDWIDTH: 20000
     command: 'bash -c $${DEMODSCRIPT}'
     volumes:
       - type: 'tmpfs'
@@ -737,7 +732,6 @@ services:
 
   horus-432940:
     image: ghcr.io/projecthorus/horusdemodlib
-    profiles: ["extra"]
     restart: 'always'
     environment:
       SDR_DEVICE: rtl-sdr-pcm.local
@@ -745,7 +739,7 @@ services:
       DECODER: horus_demod
       DEMODSCRIPT: "docker_ka9q_single.sh"
       RXFREQ: 432940000
-      RXBANDWIDTH: 10000
+      RXBANDWIDTH: 20000
     command: 'bash -c $${DEMODSCRIPT}'
     volumes:
       - type: 'tmpfs'
@@ -764,7 +758,6 @@ services:
 
   horus-432960:
     image: ghcr.io/projecthorus/horusdemodlib
-    profiles: ["extra"]
     restart: 'always'
     environment:
       SDR_DEVICE: rtl-sdr-pcm.local
@@ -772,7 +765,7 @@ services:
       DECODER: horus_demod
       DEMODSCRIPT: "docker_ka9q_single.sh"
       RXFREQ: 432960000
-      RXBANDWIDTH: 10000
+      RXBANDWIDTH: 20000
     command: 'bash -c $${DEMODSCRIPT}'
     volumes:
       - type: 'tmpfs'
@@ -791,7 +784,6 @@ services:
 
   horus-432980:
     image: ghcr.io/projecthorus/horusdemodlib
-    profiles: ["extra"]
     restart: 'always'
     environment:
       SDR_DEVICE: rtl-sdr-pcm.local
@@ -799,7 +791,7 @@ services:
       DECODER: horus_demod
       DEMODSCRIPT: "docker_ka9q_single.sh"
       RXFREQ: 432980000
-      RXBANDWIDTH: 10000
+      RXBANDWIDTH: 20000
     command: 'bash -c $${DEMODSCRIPT}'
     volumes:
       - type: 'tmpfs'
@@ -818,7 +810,6 @@ services:
 
   horus-433000:
     image: ghcr.io/projecthorus/horusdemodlib
-    profiles: ["extra"]
     restart: 'always'
     environment:
       SDR_DEVICE: rtl-sdr-pcm.local
@@ -826,7 +817,7 @@ services:
       DECODER: horus_demod
       DEMODSCRIPT: "docker_ka9q_single.sh"
       RXFREQ: 433000000
-      RXBANDWIDTH: 10000
+      RXBANDWIDTH: 20000
     command: 'bash -c $${DEMODSCRIPT}'
     volumes:
       - type: 'tmpfs'
