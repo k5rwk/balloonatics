@@ -106,6 +106,8 @@ At this point it is necessary to change the default callsigns in the configurati
 
 `nano docker-compose.yml` at the top of the file.
 
+`nano direwolf/direwolf.cfg` to change MYCALL and to add your APRS-IS passcode.
+
 **IF A GPS IS CONNECTED TO YOUR RASPBERRY PI, FOLLOW THESE STEPS:**
 
 `nano chasemapper/horusmapper.cfg` change `car_source_type` at line 38 to `serial`.
