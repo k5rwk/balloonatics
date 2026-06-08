@@ -74,7 +74,7 @@ services:
         source: '/var/run/avahi-daemon/socket'
         target: '/var/run/avahi-daemon/socket'
     network_mode: 'host'
-
+ 
   wenet-431500:
     #image: ghcr.io/projecthorus/wenet:latest
     image: ghcr.io/ke5gdb/wenet:testing
@@ -99,7 +99,7 @@ services:
         source: '/var/run/avahi-daemon/socket'
         target: '/var/run/avahi-daemon/socket'
     network_mode: 'host'
-
+ 
   wenet-431800:
     #image: ghcr.io/projecthorus/wenet:latest
     image: ghcr.io/ke5gdb/wenet:testing
@@ -120,6 +120,33 @@ services:
       - type: 'bind'
         source: './wenet-3/rx_images/'
         target: '/opt/wenet/rx_images/'
+      - type: 'bind'
+        source: '/var/run/avahi-daemon/socket'
+        target: '/var/run/avahi-daemon/socket'
+    network_mode: 'host'
+
+  # Direwolf TNC fed FM audio from ka9q-radio (pcmrecord -> direwolf stdin).
+  # The channel is defined statically in ka9q-radio/radiod.conf ([aprs]) with
+  # squelch forced open, so audio streams continuously and direwolf doesn't EOF.
+  # SDR_DEVICE/SAMPRATE must match that channel; SSRC is derived as RXFREQ/1000.
+  direwolf-433000:
+    build: ./direwolf
+    restart: 'always'
+    environment:
+      <<: *common-variables
+      SDR_DEVICE: rtl-sdr-pcm.local
+      RXFREQ: 433000000
+      SAMPRATE: 48000
+      BAUD_RATE: 1200
+    volumes:
+      - type: 'bind'
+        source: './direwolf/direwolf.conf'
+        target: '/direwolf.conf'
+        read_only: true
+      - type: 'bind'
+        source: './direwolf/docker_ka9q_direwolf.sh'
+        target: '/usr/bin/docker_ka9q_direwolf.sh'
+        read_only: true
       - type: 'bind'
         source: '/var/run/avahi-daemon/socket'
         target: '/var/run/avahi-daemon/socket'
@@ -151,6 +178,10 @@ services:
       - type: 'bind'
         source: '/var/run/avahi-daemon/socket'
         target: '/var/run/avahi-daemon/socket'
+      - type: 'bind'
+        source: './horusdemodlib/docker_ka9q_single.sh'
+        target: '/usr/bin/docker_ka9q_single.sh'
+        read_only: true
     network_mode: 'host'
 
   horus-432520:
@@ -173,6 +204,10 @@ services:
       - type: 'bind'
         source: '/var/run/avahi-daemon/socket'
         target: '/var/run/avahi-daemon/socket'
+      - type: 'bind'
+        source: './horusdemodlib/docker_ka9q_single.sh'
+        target: '/usr/bin/docker_ka9q_single.sh'
+        read_only: true
     network_mode: 'host'
 
   horus-432540:
@@ -195,6 +230,10 @@ services:
       - type: 'bind'
         source: '/var/run/avahi-daemon/socket'
         target: '/var/run/avahi-daemon/socket'
+      - type: 'bind'
+        source: './horusdemodlib/docker_ka9q_single.sh'
+        target: '/usr/bin/docker_ka9q_single.sh'
+        read_only: true
     network_mode: 'host'
 
   horus-432560:
@@ -217,6 +256,10 @@ services:
       - type: 'bind'
         source: '/var/run/avahi-daemon/socket'
         target: '/var/run/avahi-daemon/socket'
+      - type: 'bind'
+        source: './horusdemodlib/docker_ka9q_single.sh'
+        target: '/usr/bin/docker_ka9q_single.sh'
+        read_only: true
     network_mode: 'host'
 
   horus-432580:
@@ -239,6 +282,10 @@ services:
       - type: 'bind'
         source: '/var/run/avahi-daemon/socket'
         target: '/var/run/avahi-daemon/socket'
+      - type: 'bind'
+        source: './horusdemodlib/docker_ka9q_single.sh'
+        target: '/usr/bin/docker_ka9q_single.sh'
+        read_only: true
     network_mode: 'host'
 
   horus-432600:
@@ -261,6 +308,10 @@ services:
       - type: 'bind'
         source: '/var/run/avahi-daemon/socket'
         target: '/var/run/avahi-daemon/socket'
+      - type: 'bind'
+        source: './horusdemodlib/docker_ka9q_single.sh'
+        target: '/usr/bin/docker_ka9q_single.sh'
+        read_only: true
     network_mode: 'host'
 
   horus-432620:
@@ -283,6 +334,10 @@ services:
       - type: 'bind'
         source: '/var/run/avahi-daemon/socket'
         target: '/var/run/avahi-daemon/socket'
+      - type: 'bind'
+        source: './horusdemodlib/docker_ka9q_single.sh'
+        target: '/usr/bin/docker_ka9q_single.sh'
+        read_only: true
     network_mode: 'host'
 
   horus-432640:
@@ -305,6 +360,10 @@ services:
       - type: 'bind'
         source: '/var/run/avahi-daemon/socket'
         target: '/var/run/avahi-daemon/socket'
+      - type: 'bind'
+        source: './horusdemodlib/docker_ka9q_single.sh'
+        target: '/usr/bin/docker_ka9q_single.sh'
+        read_only: true
     network_mode: 'host'
 
   horus-432660:
@@ -327,6 +386,10 @@ services:
       - type: 'bind'
         source: '/var/run/avahi-daemon/socket'
         target: '/var/run/avahi-daemon/socket'
+      - type: 'bind'
+        source: './horusdemodlib/docker_ka9q_single.sh'
+        target: '/usr/bin/docker_ka9q_single.sh'
+        read_only: true
     network_mode: 'host'
 
   horus-432680:
@@ -349,6 +412,10 @@ services:
       - type: 'bind'
         source: '/var/run/avahi-daemon/socket'
         target: '/var/run/avahi-daemon/socket'
+      - type: 'bind'
+        source: './horusdemodlib/docker_ka9q_single.sh'
+        target: '/usr/bin/docker_ka9q_single.sh'
+        read_only: true
     network_mode: 'host'
 
   horus-432700:
@@ -371,6 +438,10 @@ services:
       - type: 'bind'
         source: '/var/run/avahi-daemon/socket'
         target: '/var/run/avahi-daemon/socket'
+      - type: 'bind'
+        source: './horusdemodlib/docker_ka9q_single.sh'
+        target: '/usr/bin/docker_ka9q_single.sh'
+        read_only: true
     network_mode: 'host'
 
   horus-432720:
@@ -393,6 +464,10 @@ services:
       - type: 'bind'
         source: '/var/run/avahi-daemon/socket'
         target: '/var/run/avahi-daemon/socket'
+      - type: 'bind'
+        source: './horusdemodlib/docker_ka9q_single.sh'
+        target: '/usr/bin/docker_ka9q_single.sh'
+        read_only: true
     network_mode: 'host'
 
   horus-432740:
@@ -415,6 +490,10 @@ services:
       - type: 'bind'
         source: '/var/run/avahi-daemon/socket'
         target: '/var/run/avahi-daemon/socket'
+      - type: 'bind'
+        source: './horusdemodlib/docker_ka9q_single.sh'
+        target: '/usr/bin/docker_ka9q_single.sh'
+        read_only: true
     network_mode: 'host'
 
   horus-432760:
@@ -437,6 +516,10 @@ services:
       - type: 'bind'
         source: '/var/run/avahi-daemon/socket'
         target: '/var/run/avahi-daemon/socket'
+      - type: 'bind'
+        source: './horusdemodlib/docker_ka9q_single.sh'
+        target: '/usr/bin/docker_ka9q_single.sh'
+        read_only: true
     network_mode: 'host'
 
   horus-432780:
@@ -459,6 +542,10 @@ services:
       - type: 'bind'
         source: '/var/run/avahi-daemon/socket'
         target: '/var/run/avahi-daemon/socket'
+      - type: 'bind'
+        source: './horusdemodlib/docker_ka9q_single.sh'
+        target: '/usr/bin/docker_ka9q_single.sh'
+        read_only: true
     network_mode: 'host'
 
   horus-432800:
@@ -481,10 +568,15 @@ services:
       - type: 'bind'
         source: '/var/run/avahi-daemon/socket'
         target: '/var/run/avahi-daemon/socket'
+      - type: 'bind'
+        source: './horusdemodlib/docker_ka9q_single.sh'
+        target: '/usr/bin/docker_ka9q_single.sh'
+        read_only: true
     network_mode: 'host'
 
   horus-432820:
     image: ghcr.io/projecthorus/horusdemodlib
+    profiles: ["extra"]
     restart: 'always'
     environment:
       SDR_DEVICE: rtl-sdr-pcm.local
@@ -503,10 +595,15 @@ services:
       - type: 'bind'
         source: '/var/run/avahi-daemon/socket'
         target: '/var/run/avahi-daemon/socket'
+      - type: 'bind'
+        source: './horusdemodlib/docker_ka9q_single.sh'
+        target: '/usr/bin/docker_ka9q_single.sh'
+        read_only: true
     network_mode: 'host'
 
   horus-432840:
     image: ghcr.io/projecthorus/horusdemodlib
+    profiles: ["extra"]
     restart: 'always'
     environment:
       SDR_DEVICE: rtl-sdr-pcm.local
@@ -525,10 +622,15 @@ services:
       - type: 'bind'
         source: '/var/run/avahi-daemon/socket'
         target: '/var/run/avahi-daemon/socket'
+      - type: 'bind'
+        source: './horusdemodlib/docker_ka9q_single.sh'
+        target: '/usr/bin/docker_ka9q_single.sh'
+        read_only: true
     network_mode: 'host'
 
   horus-432860:
     image: ghcr.io/projecthorus/horusdemodlib
+    profiles: ["extra"]
     restart: 'always'
     environment:
       SDR_DEVICE: rtl-sdr-pcm.local
@@ -547,10 +649,15 @@ services:
       - type: 'bind'
         source: '/var/run/avahi-daemon/socket'
         target: '/var/run/avahi-daemon/socket'
+      - type: 'bind'
+        source: './horusdemodlib/docker_ka9q_single.sh'
+        target: '/usr/bin/docker_ka9q_single.sh'
+        read_only: true
     network_mode: 'host'
 
   horus-432880:
     image: ghcr.io/projecthorus/horusdemodlib
+    profiles: ["extra"]
     restart: 'always'
     environment:
       SDR_DEVICE: rtl-sdr-pcm.local
@@ -569,6 +676,10 @@ services:
       - type: 'bind'
         source: '/var/run/avahi-daemon/socket'
         target: '/var/run/avahi-daemon/socket'
+      - type: 'bind'
+        source: './horusdemodlib/docker_ka9q_single.sh'
+        target: '/usr/bin/docker_ka9q_single.sh'
+        read_only: true
     network_mode: 'host'
 
   horus-432900:
@@ -591,10 +702,15 @@ services:
       - type: 'bind'
         source: '/var/run/avahi-daemon/socket'
         target: '/var/run/avahi-daemon/socket'
+      - type: 'bind'
+        source: './horusdemodlib/docker_ka9q_single.sh'
+        target: '/usr/bin/docker_ka9q_single.sh'
+        read_only: true
     network_mode: 'host'
 
   horus-432920:
     image: ghcr.io/projecthorus/horusdemodlib
+    profiles: ["extra"]
     restart: 'always'
     environment:
       SDR_DEVICE: rtl-sdr-pcm.local
@@ -613,10 +729,15 @@ services:
       - type: 'bind'
         source: '/var/run/avahi-daemon/socket'
         target: '/var/run/avahi-daemon/socket'
+      - type: 'bind'
+        source: './horusdemodlib/docker_ka9q_single.sh'
+        target: '/usr/bin/docker_ka9q_single.sh'
+        read_only: true
     network_mode: 'host'
 
   horus-432940:
     image: ghcr.io/projecthorus/horusdemodlib
+    profiles: ["extra"]
     restart: 'always'
     environment:
       SDR_DEVICE: rtl-sdr-pcm.local
@@ -635,10 +756,15 @@ services:
       - type: 'bind'
         source: '/var/run/avahi-daemon/socket'
         target: '/var/run/avahi-daemon/socket'
+      - type: 'bind'
+        source: './horusdemodlib/docker_ka9q_single.sh'
+        target: '/usr/bin/docker_ka9q_single.sh'
+        read_only: true
     network_mode: 'host'
 
   horus-432960:
     image: ghcr.io/projecthorus/horusdemodlib
+    profiles: ["extra"]
     restart: 'always'
     environment:
       SDR_DEVICE: rtl-sdr-pcm.local
@@ -657,10 +783,15 @@ services:
       - type: 'bind'
         source: '/var/run/avahi-daemon/socket'
         target: '/var/run/avahi-daemon/socket'
+      - type: 'bind'
+        source: './horusdemodlib/docker_ka9q_single.sh'
+        target: '/usr/bin/docker_ka9q_single.sh'
+        read_only: true
     network_mode: 'host'
 
   horus-432980:
     image: ghcr.io/projecthorus/horusdemodlib
+    profiles: ["extra"]
     restart: 'always'
     environment:
       SDR_DEVICE: rtl-sdr-pcm.local
@@ -679,10 +810,15 @@ services:
       - type: 'bind'
         source: '/var/run/avahi-daemon/socket'
         target: '/var/run/avahi-daemon/socket'
+      - type: 'bind'
+        source: './horusdemodlib/docker_ka9q_single.sh'
+        target: '/usr/bin/docker_ka9q_single.sh'
+        read_only: true
     network_mode: 'host'
 
   horus-433000:
     image: ghcr.io/projecthorus/horusdemodlib
+    profiles: ["extra"]
     restart: 'always'
     environment:
       SDR_DEVICE: rtl-sdr-pcm.local
@@ -701,4 +837,8 @@ services:
       - type: 'bind'
         source: '/var/run/avahi-daemon/socket'
         target: '/var/run/avahi-daemon/socket'
+      - type: 'bind'
+        source: './horusdemodlib/docker_ka9q_single.sh'
+        target: '/usr/bin/docker_ka9q_single.sh'
+        read_only: true
     network_mode: 'host'
