@@ -32,7 +32,6 @@ DIREWOLF_CONF="${DIREWOLF_CONF:-/direwolf.conf}"
 SSRC=$(($RXFREQ / 1000))
 
 echo "Using SDR Centre Frequency: $RXFREQ Hz"
-echo "Using SSRC: $SSRC (static [aprs] channel in radiod.conf)"
 echo "Using PCM stream: $SDR_DEVICE"
 echo "Direwolf: $SAMPRATE Hz, baud: $BAUD_RATE"
 
@@ -47,7 +46,7 @@ echo "Starting receiver chain"
 # pcmrecord streams raw 16-bit signed PCM on stdout; Direwolf reads it from
 # stdin ( '-' ) at the matching sample rate. ADEVICE in direwolf.conf must be
 # set to 'stdin null'.
-pcmrecord --ssrc $SSRC --catmode --raw $SDR_DEVICE --timeout $PCM_TIMEOUT | \
+pcmrecord --catmode --raw $SDR_DEVICE --timeout $PCM_TIMEOUT | \
   direwolf -c $DIREWOLF_CONF -r $SAMPRATE -B $BAUD_RATE -t 0 - &
 
 echo "Started everything, waiting for any failed processes"

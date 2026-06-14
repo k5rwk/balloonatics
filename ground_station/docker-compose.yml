@@ -136,7 +136,7 @@ services:
     restart: 'always'
     environment:
       <<: *common-variables
-      SDR_DEVICE: rtl-sdr-pcm.local
+      SDR_DEVICE: aprs-433000.local
       RXFREQ: 433000000
       SAMPRATE: 48000
       BAUD_RATE: 1200
