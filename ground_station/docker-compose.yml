@@ -5,6 +5,8 @@ services:
 
   # ka9q-radio SDR service
   ka9q-radio:
+    security_opt:
+      - apparmor:unconfined
     #build: https://github.com/snh/dockerfiles.git#main:ka9q-radio
     build: ./ka9q-radio
     restart: 'always'
@@ -471,6 +473,7 @@ services:
     network_mode: 'host'
 
   horus-432740:
+    profiles: ['extra']
     image: ghcr.io/projecthorus/horusdemodlib
     restart: 'always'
     environment:
@@ -523,6 +526,7 @@ services:
     network_mode: 'host'
 
   horus-432780:
+    profiles: ['extra']
     image: ghcr.io/projecthorus/horusdemodlib
     restart: 'always'
     environment:
@@ -575,6 +579,7 @@ services:
     network_mode: 'host'
 
   horus-432820:
+    profiles: ['extra']
     image: ghcr.io/projecthorus/horusdemodlib
     restart: 'always'
     environment:
@@ -601,6 +606,7 @@ services:
     network_mode: 'host'
 
   horus-432840:
+    profiles: ['extra']
     image: ghcr.io/projecthorus/horusdemodlib
     restart: 'always'
     environment:
@@ -627,6 +633,7 @@ services:
     network_mode: 'host'
 
   horus-432860:
+    profiles: ['extra']
     image: ghcr.io/projecthorus/horusdemodlib
     restart: 'always'
     environment:
@@ -653,6 +660,7 @@ services:
     network_mode: 'host'
 
   horus-432880:
+    profiles: ['extra']
     image: ghcr.io/projecthorus/horusdemodlib
     restart: 'always'
     environment:
@@ -705,6 +713,7 @@ services:
     network_mode: 'host'
 
   horus-432920:
+    profiles: ['extra']
     image: ghcr.io/projecthorus/horusdemodlib
     restart: 'always'
     environment:
@@ -731,6 +740,7 @@ services:
     network_mode: 'host'
 
   horus-432940:
+    profiles: ['extra']
     image: ghcr.io/projecthorus/horusdemodlib
     restart: 'always'
     environment:
@@ -757,6 +767,7 @@ services:
     network_mode: 'host'
 
   horus-432960:
+    profiles: ['extra']
     image: ghcr.io/projecthorus/horusdemodlib
     restart: 'always'
     environment:
