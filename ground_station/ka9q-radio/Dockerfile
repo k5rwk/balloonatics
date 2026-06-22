@@ -1,11 +1,15 @@
 # -------------------
 # The build container
 # -------------------
-FROM debian:bookworm-slim AS build
+FROM debian:trixie-slim AS build
 
 # ka9q-radio git ref to use
 #ARG REF=refs/heads/main
-ARG REF=cc22b5f5e3c26c37df441ebff29eea7d59031afd
+ARG REF=69931b5fb4ab1476ede957951f56dbcce396303d
+
+# Add KA9Q repo
+ADD --chmod=666 http://www.ka9q.net/debian/ka9q-sources.list /etc/apt/sources.list.d/ka9q-sources.list
+ADD --chmod=666 http://www.ka9q.net/debian/ka9q-radio.asc /usr/share/keyrings/ka9q-radio.asc
 
 # Install necessary packages for building the application
 RUN apt-get update && \
@@ -17,6 +21,9 @@ RUN apt-get update && \
     git \
     libairspy-dev \
     libairspyhf-dev \
+    libbladerf-dev \
+    libfobos-dev \
+    libhydrasdr-dev \
     libasound2-dev \
     libavahi-client-dev \
     libbsd-dev \
@@ -59,12 +66,12 @@ RUN unzip /tmp/ka9q-radio.zip -d /tmp && \
 WORKDIR /src
 
 # Build the application using the provided Makefile
-RUN make -f Makefile.linux
+RUN make -j$(nproc)
 
 # -------------------------
 # The application container
 # -------------------------
-FROM debian:bookworm-slim
+FROM debian:trixie-slim
 
 # Install necessary packages for running the application
 RUN apt-get update && \
@@ -77,9 +84,9 @@ RUN apt-get update && \
     libfftw3-bin \
     libfftw3-single3 \
     libhackrf0 \
-    libiniparser1 \
-    libncurses5 \
-    libncursesw5 \
+    libiniparser4 \
+    libncurses6 \
+    libncursesw6 \
     libogg0 \
     libopus0 \
     libportaudio2 \
@@ -89,29 +96,29 @@ RUN apt-get update && \
 
 # Copy the built binaries from the build stage
 COPY --from=build \
-    /src/aprs \
-    /src/aprsfeed \
-    /src/cwd \
-    /src/packetd \
-    /src/radiod \
+    /src/src/aprs \
+    /src/src/aprsfeed \
+    /src/src/cwd \
+    /src/src/packetd \
+    /src/src/radiod \
     /usr/local/sbin/
 
 # Copy radio drivers
 COPY --from=build \
-    /src/*.so \
+    /src/src/*.so \
     /usr/local/lib/ka9q-radio/
 
 # Copy additional binaries from the build stage
 COPY --from=build \
-    /src/control \
-    /src/jt-decoded \
-    /src/metadump \
-    /src/monitor \
-    /src/pcmrecord \
-    /src/pl \
-    /src/powers \
-    /src/tune \
-    /src/wd-record \
+    /src/src/control \
+    /src/src/jt-decoded \
+    /src/src/metadump \
+    /src/src/monitor \
+    /src/src/pcmrecord \
+    /src/src/ctcss \
+    /src/src/powers \
+    /src/src/tune \
+    /src/src/wd-record \
     /usr/local/bin/
 
 # Copy shared resources from the build stage
