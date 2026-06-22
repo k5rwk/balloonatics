@@ -1,7 +1,31 @@
 x-common-variables: &common-variables
   MYCALL: CHANGEME
 
+# Named volumes used to share the containerised avahi's sockets: the D-Bus
+# socket (radiod publishes records over it) and the avahi control socket
+# (every consumer's libnss-mdns resolves over it).
+volumes:
+  avahi-socket:
+  avahi-dbus:
+
 services:
+
+  # LAN-isolated Avahi/mDNS registry for the ka9q stack. Runs in its OWN network
+  # namespace (no host networking) so it never announces on the LAN. radiod
+  # publishes stream names here via D-Bus; consumers resolve them via the unix
+  # socket; both over the shared volumes above. The host's own avahi-daemon is
+  # left untouched, so <host>.local still works on the LAN.
+  avahi:
+    build: ./avahi
+    container_name: ka9q-avahi
+    restart: 'always'
+    volumes:
+      - type: 'volume'
+        source: 'avahi-socket'
+        target: '/run/avahi-daemon'
+      - type: 'volume'
+        source: 'avahi-dbus'
+        target: '/run/dbus'
 
   # ka9q-radio SDR service
   ka9q-radio:
@@ -14,6 +38,8 @@ services:
       - CAP_NET_ADMIN
       - CAP_SYS_NICE
     container_name: ka9q-radio
+    depends_on:
+      - avahi
     devices:
       - "/dev/bus/usb:/dev/bus/usb"
     network_mode: host
@@ -22,7 +48,10 @@ services:
       - ./ka9q-radio/radiod.conf:/etc/radio/radiod.conf:ro
       - ./ka9q-radio/wisdomf:/etc/fftw/wisdomf
       - ./ka9q-radio/wisdom:/var/lib/ka9q-radio/wisdom
-      - /var/run/dbus:/var/run/dbus
+      # Publish to the containerised avahi over its private D-Bus, not the host's.
+      - type: 'volume'
+        source: 'avahi-dbus'
+        target: '/run/dbus'
 
   chasemapper:
     image: ghcr.io/projecthorus/chasemapper:latest
@@ -72,9 +101,11 @@ services:
       - type: 'bind'
         source: './wenet-1/rx_images/'
         target: '/opt/wenet/rx_images/'
-      - type: 'bind'
-        source: '/var/run/avahi-daemon/socket'
-        target: '/var/run/avahi-daemon/socket'
+      - type: 'volume'
+        source: 'avahi-socket'
+        target: '/run/avahi-daemon'
+    depends_on:
+      - avahi
     network_mode: 'host'
  
   wenet-431500:
@@ -97,9 +128,11 @@ services:
       - type: 'bind'
         source: './wenet-2/rx_images/'
         target: '/opt/wenet/rx_images/'
-      - type: 'bind'
-        source: '/var/run/avahi-daemon/socket'
-        target: '/var/run/avahi-daemon/socket'
+      - type: 'volume'
+        source: 'avahi-socket'
+        target: '/run/avahi-daemon'
+    depends_on:
+      - avahi
     network_mode: 'host'
  
   wenet-431800:
@@ -122,9 +155,11 @@ services:
       - type: 'bind'
         source: './wenet-3/rx_images/'
         target: '/opt/wenet/rx_images/'
-      - type: 'bind'
-        source: '/var/run/avahi-daemon/socket'
-        target: '/var/run/avahi-daemon/socket'
+      - type: 'volume'
+        source: 'avahi-socket'
+        target: '/run/avahi-daemon'
+    depends_on:
+      - avahi
     network_mode: 'host'
 
   # Direwolf TNC fed FM audio from ka9q-radio (pcmrecord -> direwolf stdin).
@@ -150,9 +185,11 @@ services:
         source: './direwolf/docker_ka9q_direwolf.sh'
         target: '/usr/bin/docker_ka9q_direwolf.sh'
         read_only: true
-      - type: 'bind'
-        source: '/var/run/avahi-daemon/socket'
-        target: '/var/run/avahi-daemon/socket'
+      - type: 'volume'
+        source: 'avahi-socket'
+        target: '/run/avahi-daemon'
+    depends_on:
+      - avahi
     network_mode: 'host'
 
   direwolf-9600-433000:
@@ -173,9 +210,11 @@ services:
         source: './direwolf/docker_ka9q_direwolf.sh'
         target: '/usr/bin/docker_ka9q_direwolf.sh'
         read_only: true
-      - type: 'bind'
-        source: '/var/run/avahi-daemon/socket'
-        target: '/var/run/avahi-daemon/socket'
+      - type: 'volume'
+        source: 'avahi-socket'
+        target: '/run/avahi-daemon'
+    depends_on:
+      - avahi
     network_mode: 'host'
 
   # Receiver instance name (e.g. "horus-434200" or "wenet-443500")
@@ -201,13 +240,15 @@ services:
       - type: 'bind'
         source: './horusdemodlib/user.cfg'
         target: '/user.cfg'
-      - type: 'bind'
-        source: '/var/run/avahi-daemon/socket'
-        target: '/var/run/avahi-daemon/socket'
+      - type: 'volume'
+        source: 'avahi-socket'
+        target: '/run/avahi-daemon'
       - type: 'bind'
         source: './horusdemodlib/docker_ka9q_single.sh'
         target: '/usr/bin/docker_ka9q_single.sh'
         read_only: true
+    depends_on:
+      - avahi
     network_mode: 'host'
 
   horus-432520:
@@ -227,13 +268,15 @@ services:
       - type: 'bind'
         source: './horusdemodlib/user.cfg'
         target: '/user.cfg'
-      - type: 'bind'
-        source: '/var/run/avahi-daemon/socket'
-        target: '/var/run/avahi-daemon/socket'
+      - type: 'volume'
+        source: 'avahi-socket'
+        target: '/run/avahi-daemon'
       - type: 'bind'
         source: './horusdemodlib/docker_ka9q_single.sh'
         target: '/usr/bin/docker_ka9q_single.sh'
         read_only: true
+    depends_on:
+      - avahi
     network_mode: 'host'
 
   horus-432540:
@@ -253,13 +296,15 @@ services:
       - type: 'bind'
         source: './horusdemodlib/user.cfg'
         target: '/user.cfg'
-      - type: 'bind'
-        source: '/var/run/avahi-daemon/socket'
-        target: '/var/run/avahi-daemon/socket'
+      - type: 'volume'
+        source: 'avahi-socket'
+        target: '/run/avahi-daemon'
       - type: 'bind'
         source: './horusdemodlib/docker_ka9q_single.sh'
         target: '/usr/bin/docker_ka9q_single.sh'
         read_only: true
+    depends_on:
+      - avahi
     network_mode: 'host'
 
   horus-432560:
@@ -279,13 +324,15 @@ services:
       - type: 'bind'
         source: './horusdemodlib/user.cfg'
         target: '/user.cfg'
-      - type: 'bind'
-        source: '/var/run/avahi-daemon/socket'
-        target: '/var/run/avahi-daemon/socket'
+      - type: 'volume'
+        source: 'avahi-socket'
+        target: '/run/avahi-daemon'
       - type: 'bind'
         source: './horusdemodlib/docker_ka9q_single.sh'
         target: '/usr/bin/docker_ka9q_single.sh'
         read_only: true
+    depends_on:
+      - avahi
     network_mode: 'host'
 
   horus-432580:
@@ -305,13 +352,15 @@ services:
       - type: 'bind'
         source: './horusdemodlib/user.cfg'
         target: '/user.cfg'
-      - type: 'bind'
-        source: '/var/run/avahi-daemon/socket'
-        target: '/var/run/avahi-daemon/socket'
+      - type: 'volume'
+        source: 'avahi-socket'
+        target: '/run/avahi-daemon'
       - type: 'bind'
         source: './horusdemodlib/docker_ka9q_single.sh'
         target: '/usr/bin/docker_ka9q_single.sh'
         read_only: true
+    depends_on:
+      - avahi
     network_mode: 'host'
 
   horus-432600:
@@ -331,13 +380,15 @@ services:
       - type: 'bind'
         source: './horusdemodlib/user.cfg'
         target: '/user.cfg'
-      - type: 'bind'
-        source: '/var/run/avahi-daemon/socket'
-        target: '/var/run/avahi-daemon/socket'
+      - type: 'volume'
+        source: 'avahi-socket'
+        target: '/run/avahi-daemon'
       - type: 'bind'
         source: './horusdemodlib/docker_ka9q_single.sh'
         target: '/usr/bin/docker_ka9q_single.sh'
         read_only: true
+    depends_on:
+      - avahi
     network_mode: 'host'
 
   horus-432620:
@@ -357,13 +408,15 @@ services:
       - type: 'bind'
         source: './horusdemodlib/user.cfg'
         target: '/user.cfg'
-      - type: 'bind'
-        source: '/var/run/avahi-daemon/socket'
-        target: '/var/run/avahi-daemon/socket'
+      - type: 'volume'
+        source: 'avahi-socket'
+        target: '/run/avahi-daemon'
       - type: 'bind'
         source: './horusdemodlib/docker_ka9q_single.sh'
         target: '/usr/bin/docker_ka9q_single.sh'
         read_only: true
+    depends_on:
+      - avahi
     network_mode: 'host'
 
   horus-432640:
@@ -383,13 +436,15 @@ services:
       - type: 'bind'
         source: './horusdemodlib/user.cfg'
         target: '/user.cfg'
-      - type: 'bind'
-        source: '/var/run/avahi-daemon/socket'
-        target: '/var/run/avahi-daemon/socket'
+      - type: 'volume'
+        source: 'avahi-socket'
+        target: '/run/avahi-daemon'
       - type: 'bind'
         source: './horusdemodlib/docker_ka9q_single.sh'
         target: '/usr/bin/docker_ka9q_single.sh'
         read_only: true
+    depends_on:
+      - avahi
     network_mode: 'host'
 
   horus-432660:
@@ -409,13 +464,15 @@ services:
       - type: 'bind'
         source: './horusdemodlib/user.cfg'
         target: '/user.cfg'
-      - type: 'bind'
-        source: '/var/run/avahi-daemon/socket'
-        target: '/var/run/avahi-daemon/socket'
+      - type: 'volume'
+        source: 'avahi-socket'
+        target: '/run/avahi-daemon'
       - type: 'bind'
         source: './horusdemodlib/docker_ka9q_single.sh'
         target: '/usr/bin/docker_ka9q_single.sh'
         read_only: true
+    depends_on:
+      - avahi
     network_mode: 'host'
 
   horus-432680:
@@ -435,13 +492,15 @@ services:
       - type: 'bind'
         source: './horusdemodlib/user.cfg'
         target: '/user.cfg'
-      - type: 'bind'
-        source: '/var/run/avahi-daemon/socket'
-        target: '/var/run/avahi-daemon/socket'
+      - type: 'volume'
+        source: 'avahi-socket'
+        target: '/run/avahi-daemon'
       - type: 'bind'
         source: './horusdemodlib/docker_ka9q_single.sh'
         target: '/usr/bin/docker_ka9q_single.sh'
         read_only: true
+    depends_on:
+      - avahi
     network_mode: 'host'
 
   horus-432700:
@@ -461,13 +520,15 @@ services:
       - type: 'bind'
         source: './horusdemodlib/user.cfg'
         target: '/user.cfg'
-      - type: 'bind'
-        source: '/var/run/avahi-daemon/socket'
-        target: '/var/run/avahi-daemon/socket'
+      - type: 'volume'
+        source: 'avahi-socket'
+        target: '/run/avahi-daemon'
       - type: 'bind'
         source: './horusdemodlib/docker_ka9q_single.sh'
         target: '/usr/bin/docker_ka9q_single.sh'
         read_only: true
+    depends_on:
+      - avahi
     network_mode: 'host'
 
   horus-432720:
@@ -487,13 +548,15 @@ services:
       - type: 'bind'
         source: './horusdemodlib/user.cfg'
         target: '/user.cfg'
-      - type: 'bind'
-        source: '/var/run/avahi-daemon/socket'
-        target: '/var/run/avahi-daemon/socket'
+      - type: 'volume'
+        source: 'avahi-socket'
+        target: '/run/avahi-daemon'
       - type: 'bind'
         source: './horusdemodlib/docker_ka9q_single.sh'
         target: '/usr/bin/docker_ka9q_single.sh'
         read_only: true
+    depends_on:
+      - avahi
     network_mode: 'host'
 
   horus-432740:
@@ -514,13 +577,15 @@ services:
       - type: 'bind'
         source: './horusdemodlib/user.cfg'
         target: '/user.cfg'
-      - type: 'bind'
-        source: '/var/run/avahi-daemon/socket'
-        target: '/var/run/avahi-daemon/socket'
+      - type: 'volume'
+        source: 'avahi-socket'
+        target: '/run/avahi-daemon'
       - type: 'bind'
         source: './horusdemodlib/docker_ka9q_single.sh'
         target: '/usr/bin/docker_ka9q_single.sh'
         read_only: true
+    depends_on:
+      - avahi
     network_mode: 'host'
 
   horus-432760:
@@ -540,13 +605,15 @@ services:
       - type: 'bind'
         source: './horusdemodlib/user.cfg'
         target: '/user.cfg'
-      - type: 'bind'
-        source: '/var/run/avahi-daemon/socket'
-        target: '/var/run/avahi-daemon/socket'
+      - type: 'volume'
+        source: 'avahi-socket'
+        target: '/run/avahi-daemon'
       - type: 'bind'
         source: './horusdemodlib/docker_ka9q_single.sh'
         target: '/usr/bin/docker_ka9q_single.sh'
         read_only: true
+    depends_on:
+      - avahi
     network_mode: 'host'
 
   horus-432780:
@@ -567,13 +634,15 @@ services:
       - type: 'bind'
         source: './horusdemodlib/user.cfg'
         target: '/user.cfg'
-      - type: 'bind'
-        source: '/var/run/avahi-daemon/socket'
-        target: '/var/run/avahi-daemon/socket'
+      - type: 'volume'
+        source: 'avahi-socket'
+        target: '/run/avahi-daemon'
       - type: 'bind'
         source: './horusdemodlib/docker_ka9q_single.sh'
         target: '/usr/bin/docker_ka9q_single.sh'
         read_only: true
+    depends_on:
+      - avahi
     network_mode: 'host'
 
   horus-432800:
@@ -593,13 +662,15 @@ services:
       - type: 'bind'
         source: './horusdemodlib/user.cfg'
         target: '/user.cfg'
-      - type: 'bind'
-        source: '/var/run/avahi-daemon/socket'
-        target: '/var/run/avahi-daemon/socket'
+      - type: 'volume'
+        source: 'avahi-socket'
+        target: '/run/avahi-daemon'
       - type: 'bind'
         source: './horusdemodlib/docker_ka9q_single.sh'
         target: '/usr/bin/docker_ka9q_single.sh'
         read_only: true
+    depends_on:
+      - avahi
     network_mode: 'host'
 
   horus-432820:
@@ -620,13 +691,15 @@ services:
       - type: 'bind'
         source: './horusdemodlib/user.cfg'
         target: '/user.cfg'
-      - type: 'bind'
-        source: '/var/run/avahi-daemon/socket'
-        target: '/var/run/avahi-daemon/socket'
+      - type: 'volume'
+        source: 'avahi-socket'
+        target: '/run/avahi-daemon'
       - type: 'bind'
         source: './horusdemodlib/docker_ka9q_single.sh'
         target: '/usr/bin/docker_ka9q_single.sh'
         read_only: true
+    depends_on:
+      - avahi
     network_mode: 'host'
 
   horus-432840:
@@ -647,13 +720,15 @@ services:
       - type: 'bind'
         source: './horusdemodlib/user.cfg'
         target: '/user.cfg'
-      - type: 'bind'
-        source: '/var/run/avahi-daemon/socket'
-        target: '/var/run/avahi-daemon/socket'
+      - type: 'volume'
+        source: 'avahi-socket'
+        target: '/run/avahi-daemon'
       - type: 'bind'
         source: './horusdemodlib/docker_ka9q_single.sh'
         target: '/usr/bin/docker_ka9q_single.sh'
         read_only: true
+    depends_on:
+      - avahi
     network_mode: 'host'
 
   horus-432860:
@@ -674,13 +749,15 @@ services:
       - type: 'bind'
         source: './horusdemodlib/user.cfg'
         target: '/user.cfg'
-      - type: 'bind'
-        source: '/var/run/avahi-daemon/socket'
-        target: '/var/run/avahi-daemon/socket'
+      - type: 'volume'
+        source: 'avahi-socket'
+        target: '/run/avahi-daemon'
       - type: 'bind'
         source: './horusdemodlib/docker_ka9q_single.sh'
         target: '/usr/bin/docker_ka9q_single.sh'
         read_only: true
+    depends_on:
+      - avahi
     network_mode: 'host'
 
   horus-432880:
@@ -701,13 +778,15 @@ services:
       - type: 'bind'
         source: './horusdemodlib/user.cfg'
         target: '/user.cfg'
-      - type: 'bind'
-        source: '/var/run/avahi-daemon/socket'
-        target: '/var/run/avahi-daemon/socket'
+      - type: 'volume'
+        source: 'avahi-socket'
+        target: '/run/avahi-daemon'
       - type: 'bind'
         source: './horusdemodlib/docker_ka9q_single.sh'
         target: '/usr/bin/docker_ka9q_single.sh'
         read_only: true
+    depends_on:
+      - avahi
     network_mode: 'host'
 
   horus-432900:
@@ -727,13 +806,15 @@ services:
       - type: 'bind'
         source: './horusdemodlib/user.cfg'
         target: '/user.cfg'
-      - type: 'bind'
-        source: '/var/run/avahi-daemon/socket'
-        target: '/var/run/avahi-daemon/socket'
+      - type: 'volume'
+        source: 'avahi-socket'
+        target: '/run/avahi-daemon'
       - type: 'bind'
         source: './horusdemodlib/docker_ka9q_single.sh'
         target: '/usr/bin/docker_ka9q_single.sh'
         read_only: true
+    depends_on:
+      - avahi
     network_mode: 'host'
 
   horus-432920:
@@ -754,13 +835,15 @@ services:
       - type: 'bind'
         source: './horusdemodlib/user.cfg'
         target: '/user.cfg'
-      - type: 'bind'
-        source: '/var/run/avahi-daemon/socket'
-        target: '/var/run/avahi-daemon/socket'
+      - type: 'volume'
+        source: 'avahi-socket'
+        target: '/run/avahi-daemon'
       - type: 'bind'
         source: './horusdemodlib/docker_ka9q_single.sh'
         target: '/usr/bin/docker_ka9q_single.sh'
         read_only: true
+    depends_on:
+      - avahi
     network_mode: 'host'
 
   horus-432940:
@@ -781,13 +864,15 @@ services:
       - type: 'bind'
         source: './horusdemodlib/user.cfg'
         target: '/user.cfg'
-      - type: 'bind'
-        source: '/var/run/avahi-daemon/socket'
-        target: '/var/run/avahi-daemon/socket'
+      - type: 'volume'
+        source: 'avahi-socket'
+        target: '/run/avahi-daemon'
       - type: 'bind'
         source: './horusdemodlib/docker_ka9q_single.sh'
         target: '/usr/bin/docker_ka9q_single.sh'
         read_only: true
+    depends_on:
+      - avahi
     network_mode: 'host'
 
   horus-432960:
@@ -808,13 +893,15 @@ services:
       - type: 'bind'
         source: './horusdemodlib/user.cfg'
         target: '/user.cfg'
-      - type: 'bind'
-        source: '/var/run/avahi-daemon/socket'
-        target: '/var/run/avahi-daemon/socket'
+      - type: 'volume'
+        source: 'avahi-socket'
+        target: '/run/avahi-daemon'
       - type: 'bind'
         source: './horusdemodlib/docker_ka9q_single.sh'
         target: '/usr/bin/docker_ka9q_single.sh'
         read_only: true
+    depends_on:
+      - avahi
     network_mode: 'host'
 
   horus-432980:
@@ -834,13 +921,15 @@ services:
       - type: 'bind'
         source: './horusdemodlib/user.cfg'
         target: '/user.cfg'
-      - type: 'bind'
-        source: '/var/run/avahi-daemon/socket'
-        target: '/var/run/avahi-daemon/socket'
+      - type: 'volume'
+        source: 'avahi-socket'
+        target: '/run/avahi-daemon'
       - type: 'bind'
         source: './horusdemodlib/docker_ka9q_single.sh'
         target: '/usr/bin/docker_ka9q_single.sh'
         read_only: true
+    depends_on:
+      - avahi
     network_mode: 'host'
 
   horus-433000:
@@ -860,11 +949,13 @@ services:
       - type: 'bind'
         source: './horusdemodlib/user.cfg'
         target: '/user.cfg'
-      - type: 'bind'
-        source: '/var/run/avahi-daemon/socket'
-        target: '/var/run/avahi-daemon/socket'
+      - type: 'volume'
+        source: 'avahi-socket'
+        target: '/run/avahi-daemon'
       - type: 'bind'
         source: './horusdemodlib/docker_ka9q_single.sh'
         target: '/usr/bin/docker_ka9q_single.sh'
         read_only: true
+    depends_on:
+      - avahi
     network_mode: 'host'
