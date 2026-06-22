@@ -13,9 +13,13 @@ rm -f /run/dbus/pid /run/dbus/system_bus_socket
 dbus-daemon --system --fork
 
 # avahi drops to the 'avahi' user and writes its control socket here; make sure
-# the shared volume is writable by it and free of a stale socket from last run.
+# the shared volume is writable by it. NOTE: this is a *persistent* named volume,
+# so a stale pid file from the previous run survives a restart -- and since avahi
+# runs as PID 1, its "is the old PID still alive?" check always says yes and it
+# refuses to start ("Daemon already running on PID 1"). Clear the pid (and an
+# orphaned socket) before launching.
 mkdir -p /run/avahi-daemon
-rm -f /run/avahi-daemon/socket
+rm -f /run/avahi-daemon/pid /run/avahi-daemon/socket
 chown avahi:avahi /run/avahi-daemon
 
 exec avahi-daemon --no-chroot -f /etc/avahi/avahi-daemon.conf
