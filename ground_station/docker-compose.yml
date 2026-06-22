@@ -136,10 +136,34 @@ services:
     restart: 'always'
     environment:
       <<: *common-variables
-      SDR_DEVICE: aprs-433000.local
+      SDR_DEVICE: aprs-433000-pcm.local
       RXFREQ: 433000000
       SAMPRATE: 48000
       BAUD_RATE: 1200
+      STARTUP_JITTER: 0
+    volumes:
+      - type: 'bind'
+        source: './direwolf/direwolf.conf'
+        target: '/direwolf.conf'
+        read_only: true
+      - type: 'bind'
+        source: './direwolf/docker_ka9q_direwolf.sh'
+        target: '/usr/bin/docker_ka9q_direwolf.sh'
+        read_only: true
+      - type: 'bind'
+        source: '/var/run/avahi-daemon/socket'
+        target: '/var/run/avahi-daemon/socket'
+    network_mode: 'host'
+
+  direwolf-9600-433000:
+    build: ./direwolf
+    restart: 'always'
+    environment:
+      <<: *common-variables
+      SDR_DEVICE: aprs-9600-433000-pcm.local
+      RXFREQ: 433000000
+      SAMPRATE: 48000
+      BAUD_RATE: 9600
     volumes:
       - type: 'bind'
         source: './direwolf/direwolf.conf'
