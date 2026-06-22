@@ -219,8 +219,9 @@ services:
 
   # Receiver instance name (e.g. "horus-434200" or "wenet-443500")
   horus-432500:
-    image: ghcr.io/projecthorus/horusdemodlib
-    # image: horusdemodlib
+    image: balloonatics/horusdemodlib:local
+    build:
+      context: ./horusdemodlib
     restart: 'always'
     environment:
       # Change this to match the PCM device defined in
@@ -252,7 +253,9 @@ services:
     network_mode: 'host'
 
   horus-432520:
-    image: ghcr.io/projecthorus/horusdemodlib
+    image: balloonatics/horusdemodlib:local
+    build:
+      context: ./horusdemodlib
     restart: 'always'
     environment:
       SDR_DEVICE: horus-432520-pcm.local
@@ -280,7 +283,9 @@ services:
     network_mode: 'host'
 
   horus-432540:
-    image: ghcr.io/projecthorus/horusdemodlib
+    image: balloonatics/horusdemodlib:local
+    build:
+      context: ./horusdemodlib
     restart: 'always'
     environment:
       SDR_DEVICE: horus-432540-pcm.local
@@ -308,7 +313,9 @@ services:
     network_mode: 'host'
 
   horus-432560:
-    image: ghcr.io/projecthorus/horusdemodlib
+    image: balloonatics/horusdemodlib:local
+    build:
+      context: ./horusdemodlib
     restart: 'always'
     environment:
       SDR_DEVICE: horus-432560-pcm.local
@@ -336,7 +343,9 @@ services:
     network_mode: 'host'
 
   horus-432580:
-    image: ghcr.io/projecthorus/horusdemodlib
+    image: balloonatics/horusdemodlib:local
+    build:
+      context: ./horusdemodlib
     restart: 'always'
     environment:
       SDR_DEVICE: horus-432580-pcm.local
@@ -364,7 +373,9 @@ services:
     network_mode: 'host'
 
   horus-432600:
-    image: ghcr.io/projecthorus/horusdemodlib
+    image: balloonatics/horusdemodlib:local
+    build:
+      context: ./horusdemodlib
     restart: 'always'
     environment:
       SDR_DEVICE: horus-432600-pcm.local
@@ -392,7 +403,9 @@ services:
     network_mode: 'host'
 
   horus-432620:
-    image: ghcr.io/projecthorus/horusdemodlib
+    image: balloonatics/horusdemodlib:local
+    build:
+      context: ./horusdemodlib
     restart: 'always'
     environment:
       SDR_DEVICE: horus-432620-pcm.local
@@ -420,7 +433,9 @@ services:
     network_mode: 'host'
 
   horus-432640:
-    image: ghcr.io/projecthorus/horusdemodlib
+    image: balloonatics/horusdemodlib:local
+    build:
+      context: ./horusdemodlib
     restart: 'always'
     environment:
       SDR_DEVICE: horus-432640-pcm.local
@@ -448,7 +463,9 @@ services:
     network_mode: 'host'
 
   horus-432660:
-    image: ghcr.io/projecthorus/horusdemodlib
+    image: balloonatics/horusdemodlib:local
+    build:
+      context: ./horusdemodlib
     restart: 'always'
     environment:
       SDR_DEVICE: horus-432660-pcm.local
@@ -476,7 +493,9 @@ services:
     network_mode: 'host'
 
   horus-432680:
-    image: ghcr.io/projecthorus/horusdemodlib
+    image: balloonatics/horusdemodlib:local
+    build:
+      context: ./horusdemodlib
     restart: 'always'
     environment:
       SDR_DEVICE: horus-432680-pcm.local
@@ -504,7 +523,9 @@ services:
     network_mode: 'host'
 
   horus-432700:
-    image: ghcr.io/projecthorus/horusdemodlib
+    image: balloonatics/horusdemodlib:local
+    build:
+      context: ./horusdemodlib
     restart: 'always'
     environment:
       SDR_DEVICE: horus-432700-pcm.local
@@ -532,7 +553,9 @@ services:
     network_mode: 'host'
 
   horus-432720:
-    image: ghcr.io/projecthorus/horusdemodlib
+    image: balloonatics/horusdemodlib:local
+    build:
+      context: ./horusdemodlib
     restart: 'always'
     environment:
       SDR_DEVICE: horus-432720-pcm.local
@@ -561,7 +584,9 @@ services:
 
   horus-432740:
     profiles: ['extra']
-    image: ghcr.io/projecthorus/horusdemodlib
+    image: balloonatics/horusdemodlib:local
+    build:
+      context: ./horusdemodlib
     restart: 'always'
     environment:
       SDR_DEVICE: horus-432740-pcm.local
@@ -589,7 +614,9 @@ services:
     network_mode: 'host'
 
   horus-432760:
-    image: ghcr.io/projecthorus/horusdemodlib
+    image: balloonatics/horusdemodlib:local
+    build:
+      context: ./horusdemodlib
     restart: 'always'
     environment:
       SDR_DEVICE: horus-432760-pcm.local
@@ -618,7 +645,9 @@ services:
 
   horus-432780:
     profiles: ['extra']
-    image: ghcr.io/projecthorus/horusdemodlib
+    image: balloonatics/horusdemodlib:local
+    build:
+      context: ./horusdemodlib
     restart: 'always'
     environment:
       SDR_DEVICE: horus-432780-pcm.local
@@ -646,7 +675,9 @@ services:
     network_mode: 'host'
 
   horus-432800:
-    image: ghcr.io/projecthorus/horusdemodlib
+    image: balloonatics/horusdemodlib:local
+    build:
+      context: ./horusdemodlib
     restart: 'always'
     environment:
       SDR_DEVICE: horus-432800-pcm.local
@@ -675,7 +706,9 @@ services:
 
   horus-432820:
     profiles: ['extra']
-    image: ghcr.io/projecthorus/horusdemodlib
+    image: balloonatics/horusdemodlib:local
+    build:
+      context: ./horusdemodlib
     restart: 'always'
     environment:
       SDR_DEVICE: horus-432820-pcm.local
@@ -704,7 +737,9 @@ services:
 
   horus-432840:
     profiles: ['extra']
-    image: ghcr.io/projecthorus/horusdemodlib
+    image: balloonatics/horusdemodlib:local
+    build:
+      context: ./horusdemodlib
     restart: 'always'
     environment:
       SDR_DEVICE: horus-432840-pcm.local
@@ -733,7 +768,9 @@ services:
 
   horus-432860:
     profiles: ['extra']
-    image: ghcr.io/projecthorus/horusdemodlib
+    image: balloonatics/horusdemodlib:local
+    build:
+      context: ./horusdemodlib
     restart: 'always'
     environment:
       SDR_DEVICE: horus-432860-pcm.local
@@ -762,7 +799,9 @@ services:
 
   horus-432880:
     profiles: ['extra']
-    image: ghcr.io/projecthorus/horusdemodlib
+    image: balloonatics/horusdemodlib:local
+    build:
+      context: ./horusdemodlib
     restart: 'always'
     environment:
       SDR_DEVICE: horus-432880-pcm.local
@@ -790,7 +829,9 @@ services:
     network_mode: 'host'
 
   horus-432900:
-    image: ghcr.io/projecthorus/horusdemodlib
+    image: balloonatics/horusdemodlib:local
+    build:
+      context: ./horusdemodlib
     restart: 'always'
     environment:
       SDR_DEVICE: horus-432900-pcm.local
@@ -819,7 +860,9 @@ services:
 
   horus-432920:
     profiles: ['extra']
-    image: ghcr.io/projecthorus/horusdemodlib
+    image: balloonatics/horusdemodlib:local
+    build:
+      context: ./horusdemodlib
     restart: 'always'
     environment:
       SDR_DEVICE: horus-432920-pcm.local
@@ -848,7 +891,9 @@ services:
 
   horus-432940:
     profiles: ['extra']
-    image: ghcr.io/projecthorus/horusdemodlib
+    image: balloonatics/horusdemodlib:local
+    build:
+      context: ./horusdemodlib
     restart: 'always'
     environment:
       SDR_DEVICE: horus-432940-pcm.local
@@ -877,7 +922,9 @@ services:
 
   horus-432960:
     profiles: ['extra']
-    image: ghcr.io/projecthorus/horusdemodlib
+    image: balloonatics/horusdemodlib:local
+    build:
+      context: ./horusdemodlib
     restart: 'always'
     environment:
       SDR_DEVICE: horus-432960-pcm.local
@@ -905,7 +952,9 @@ services:
     network_mode: 'host'
 
   horus-432980:
-    image: ghcr.io/projecthorus/horusdemodlib
+    image: balloonatics/horusdemodlib:local
+    build:
+      context: ./horusdemodlib
     restart: 'always'
     environment:
       SDR_DEVICE: horus-432980-pcm.local
@@ -933,7 +982,9 @@ services:
     network_mode: 'host'
 
   horus-433000:
-    image: ghcr.io/projecthorus/horusdemodlib
+    image: balloonatics/horusdemodlib:local
+    build:
+      context: ./horusdemodlib
     restart: 'always'
     environment:
       SDR_DEVICE: horus-433000-pcm.local
