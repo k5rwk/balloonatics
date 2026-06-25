@@ -29,10 +29,16 @@ x-avahi-vol: &avahi-vol
   target: '/run/avahi-daemon'
 
 # Common config for the 26 horus feeders. They differ ONLY in SDR_DEVICE +
-# RXFREQ (set per service); everything else is shared. Each feeder runs
-# pcmrecord -> native horus_demod -> the shared horus-server (edge-DSP model).
+# RXFREQ (set per service); everything else is shared.
+#
+# A/B method switch (DEMODSCRIPT picks the feeder script; both are mounted):
+#   * EDGE-DSP (default): DEMODSCRIPT=docker_ka9q_server.sh -- feeder demods in
+#     native C and ships text; horus-server runs uploader_server.py. ~34% CPU.
+#   * AUDIO-SERVER (test): DEMODSCRIPT=docker_ka9q_audio.sh -- feeder ships raw IQ;
+#     horus-server runs `python3 -m horusdemodlib.server`. Change BOTH this line
+#     and the horus-server command below to switch.
 x-horus-feeder-env: &horus-feeder-env
-  DEMODSCRIPT: "docker_ka9q_server.sh"
+  DEMODSCRIPT: "docker_ka9q_audio.sh"
   RXBANDWIDTH: 22000
 
 x-horus-feeder: &horus-feeder
@@ -52,8 +58,14 @@ x-horus-feeder: &horus-feeder
       source: './horusdemodlib/docker_ka9q_server.sh'
       target: '/usr/bin/docker_ka9q_server.sh'
       read_only: true
+    - type: 'bind'
+      source: './horusdemodlib/docker_ka9q_audio.sh'
+      target: '/usr/bin/docker_ka9q_audio.sh'
+      read_only: true
   depends_on:
     - avahi
+    - horus-server
+    - ka9q-radio
   network_mode: 'host'
 
 # Common config for the wenet receivers. They differ in RXFREQ, DEVICE,
@@ -250,13 +262,16 @@ services:
       - avahi
     network_mode: 'host'
 
-  # Shared uploader for the whole fleet (edge-DSP model). The feeders demod
-  # natively (native horus_demod, ~1% CPU/stream, spread across cores by the OS)
-  # and stream only decoded telemetry text here; this process just decodes the
-  # text and uploads to Sondehub, so one instance cheaply serves all channels.
+  # Shared horus-server. Two interchangeable methods (see the feeder A/B note
+  # above); switch the command here AND the feeders' DEMODSCRIPT together:
+  #   * EDGE-DSP (default): uploader_server.py just decodes the text the native
+  #     feeders send and uploads. One cheap instance serves all channels (~34% CPU).
+  #   * AUDIO-SERVER (test): server.py demodulates raw IQ in-process across a
+  #     multiprocessing pool and uploads. Comment/uncomment to switch.
   horus-server:
     <<: *horus-server
-    command: 'python3 /usr/local/bin/uploader_server.py -c /user.cfg --tcp-port 4921'
+    # command: 'python3 /usr/local/bin/uploader_server.py -c /user.cfg --tcp-port 4921'
+    command: 'python3 -m horusdemodlib.server -c /user.cfg --tcp-port 4921'  # AUDIO-SERVER method
 
   # Receiver instance name (e.g. "horus-434200" or "wenet-443500")
   horus-432500:
