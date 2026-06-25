@@ -20,7 +20,7 @@ ARG HORUS_REF=cd3bd498e764841fbf392e3d5c56f496ee542eb1   # v0.6.1 (matches base 
 # tcp-demod branch tip - source for the central audio-server method (server.py +
 # demod.py), kept available for A/B testing against the edge-DSP method. Pure
 # Python, reuses the existing cffi interface, so no recompile.
-ARG SERVER_REF=518fa0820f9e19d2659322cee7467b42041c592f
+ARG SERVER_REF=b472aef34a27a170e12494c106abaed95a4f48e4
 ARG HORUS_IMAGE=ghcr.io/projecthorus/horusdemodlib:latest
 
 FROM debian:bookworm-slim AS demodbuild
