@@ -126,6 +126,11 @@ services:
       - avahi
     devices:
       - "/dev/bus/usb:/dev/bus/usb"
+    environment:
+      # Set SDRPLAY=1 to start the SDRplay API service daemon before radiod.
+      # Also update radiod.conf: comment out [sdr] device=rtlsdr
+      # and uncomment [sdr] device=sdrplay.
+      SDRPLAY: 0
     network_mode: host
     tty: true
     volumes:
