@@ -80,8 +80,10 @@ RUN unzip /tmp/ka9q-radio.zip -d /tmp && \
 # Set the working directory
 WORKDIR /src
 
-# Build the application using the provided Makefile
-RUN make -j$(nproc)
+# Build the application using the provided Makefile. ENABLE_SDRPLAY defaults to
+# 0 in the upstream Makefile ("proprietary API"); we always build it since the
+# API files are present and the plugin is only activated at runtime via SDRPLAY=1.
+RUN make -j$(nproc) ENABLE_SDRPLAY=1
 
 # -------------------------
 # The application container
