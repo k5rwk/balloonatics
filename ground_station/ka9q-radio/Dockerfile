@@ -44,6 +44,21 @@ RUN apt-get update && \
     uuid-dev \
     && rm -rf /var/lib/apt/lists/*
 
+# Install SDRplay API: headers for build-time plugin compilation; library and
+# service daemon are copied to the runtime image via /usr/local/lib and /opt/sdrplay_api.
+ADD https://www.sdrplay.com/software/SDRplay_RSP_API-Linux-3.15.2.run /tmp/
+RUN ARCH=$(dpkg --print-architecture) && \
+    sh /tmp/SDRplay_RSP_API-Linux-3.15.2.run --noexec --target /tmp/sdrplay_pkg && \
+    cp /tmp/sdrplay_pkg/${ARCH}/libsdrplay_api.so.3.15 /usr/local/lib/ && \
+    ln -sf libsdrplay_api.so.3.15 /usr/local/lib/libsdrplay_api.so.3 && \
+    ln -sf libsdrplay_api.so.3 /usr/local/lib/libsdrplay_api.so && \
+    cp /tmp/sdrplay_pkg/inc/sdrplay_api*.h /usr/local/include/ && \
+    mkdir -p /opt/sdrplay_api && \
+    cp /tmp/sdrplay_pkg/${ARCH}/sdrplay_apiService /opt/sdrplay_api/ && \
+    chmod 755 /opt/sdrplay_api/sdrplay_apiService && \
+    ldconfig && \
+    rm -rf /tmp/sdrplay_pkg /tmp/SDRplay_RSP_API-Linux-3.15.2.run
+
 #RUN git clone https://github.com/steve-m/librtlsdr.git /tmp/librtlsdr && \
 ADD https://github.com/steve-m/librtlsdr/archive/refs/heads/master.zip /tmp/librtlsdr.zip
 RUN unzip /tmp/librtlsdr.zip -d /tmp && \
@@ -91,6 +106,7 @@ RUN apt-get update && \
     libopus0 \
     libportaudio2 \
     libsamplerate0 \
+    libudev1 \
     tini && \
     rm -rf /var/lib/apt/lists/*
 
@@ -124,8 +140,10 @@ COPY --from=build \
 # Copy shared resources from the build stage
 COPY --from=build /src/share /usr/local/share/ka9q-radio
 
-# Copy rtl-sdr from the build container.
+# Copy rtl-sdr and SDRplay libraries from the build container.
 COPY --from=build /usr/local/lib /usr/local/lib
+# SDRplay API service daemon (library was carried above via /usr/local/lib)
+COPY --from=build /opt/sdrplay_api/sdrplay_apiService /opt/sdrplay_api/sdrplay_apiService
 RUN ldconfig
 
 RUN echo "[wenet] \n\
@@ -143,10 +161,13 @@ RUN echo "[wenet] \n\
         recovery-rate = 20" >> /usr/local/share/ka9q-radio/presets.conf
 
 # Create necessary directories
-RUN mkdir -p /etc/radio /etc/fftw /var/lib/ka9q-radio
+RUN mkdir -p /etc/radio /etc/fftw /var/lib/ka9q-radio /opt/sdrplay_api
 
-# Use tini as the init system to handle reaping zombie processes and signal forwarding
-ENTRYPOINT ["/usr/bin/tini", "--"]
+COPY entrypoint.sh /entrypoint.sh
+RUN chmod +x /entrypoint.sh
+
+# entrypoint.sh optionally starts sdrplay_apiService (when SDRPLAY=1) then execs tini
+ENTRYPOINT ["/entrypoint.sh"]
 
 # Define the default command to run the application
 CMD ["/usr/local/sbin/radiod", "/etc/radio/radiod.conf"]
