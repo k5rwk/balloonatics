@@ -100,13 +100,19 @@ git clone https://github.com/k5rwk/balloonatics.git -b gpsl
 cd balloonatics/ground_station
 ```
 
-At this point it is necessary to change the default callsigns in the configuration files to your callsign. 
+At this point it is necessary to set your callsign. This is now done in **one place**: the `MYCALL` variable at the top of `docker-compose.yml`.
 
-`nano horusdemodlib/user.cfg` at line 7. Leave lat/lon at (0.0, 0.0) if you are using Chasemapper with a GPS!
+`nano docker-compose.yml` and set `MYCALL` (under `x-common-variables` at the top of the file) to your callsign. Include an SSID if you want one (e.g. `W5XYZ-10`).
 
-`nano docker-compose.yml` at the top of the file.
+From this single value the stack automatically populates, at container startup:
 
-`nano direwolf/direwolf.cfg` to change MYCALL and to add your APRS-IS passcode.
+* `horusdemodlib/user.cfg` &mdash; the SondeHub-Amateur upload `callsign` (plus the `RADIO_COMMENT` / `ANTENNA_COMMENT` values, also set in `docker-compose.yml`).
+* `direwolf/direwolf.conf` &mdash; `MYCALL` and `IGLOGIN`, **including the APRS-IS passcode, which is computed for you** (no need to look it up). If `MYCALL` is left as `CHANGEME`, the APRS-IS uplink is disabled automatically.
+* `chasemapper/horusmapper.cfg` &mdash; `habitat_call` (used only when chase-car position upload is enabled).
+
+You do **not** need to edit the callsign in those files directly &mdash; they contain `__MYCALL__` placeholder tokens that are filled in from `MYCALL`.
+
+One thing still set by hand: if you want your station plotted, edit your station latitude/longitude in `horusdemodlib/user.cfg` (`nano horusdemodlib/user.cfg`). Leave lat/lon at (0.0, 0.0) if you are using Chasemapper with a GPS!
 
 **IF A GPS IS CONNECTED TO YOUR RASPBERRY PI, FOLLOW THESE STEPS:**
 
