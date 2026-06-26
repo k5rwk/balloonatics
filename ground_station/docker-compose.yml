@@ -1,5 +1,5 @@
 x-common-variables: &common-variables
-  MYCALL: CHANGEME
+  MYCALL: KE5GDB
 
 # Common config for the Horus decoder service (horus-server). Kept as an anchor
 # so additional instances are easy to add if a host ever needs to scale out.
@@ -9,6 +9,11 @@ x-horus-server: &horus-server
     context: ./horusdemodlib
   restart: 'always'
   environment:
+    # MYCALL (callsign) + station metadata, rendered into user.cfg at startup by
+    # render_user_cfg.sh and uploaded to SondeHub-Amateur by the uploader.
+    <<: *common-variables
+    RADIO_COMMENT: "HorusDemodLib + ka9q-radio"
+    ANTENNA_COMMENT: "1/4 wave magmount"
     # Only Python process left in the horus path, so the glibc arena tuning
     # lives here now (the feeders are pure pcmrecord/bash).
     MALLOC_ARENA_MAX: "2"
@@ -20,6 +25,10 @@ x-horus-server: &horus-server
     - type: 'bind'
       source: './horusdemodlib/user.cfg'
       target: '/user.cfg'
+    - type: 'bind'
+      source: './horusdemodlib/render_user_cfg.sh'
+      target: '/usr/bin/render_user_cfg.sh'
+      read_only: true
   network_mode: 'host'
 
 # Shared avahi-socket mount, reused by every consumer that resolves *.local names.
@@ -178,6 +187,12 @@ services:
   chasemapper:
     image: ghcr.io/projecthorus/chasemapper:latest
     restart: 'always'
+    environment:
+      <<: *common-variables
+    # habitat_call is rendered from MYCALL into a writable /tmp copy of the config
+    # (the bind-mounted original stays untouched on the host), then chasemapper is
+    # pointed at the copy with -c. Only matters when habitat_upload_enabled = True.
+    command: 'sh -c "sed s/__MYCALL__/$${MYCALL:-N0CALL}/g /opt/chasemapper/horusmapper.cfg > /tmp/horusmapper.cfg && exec python3 /opt/chasemapper/horusmapper.py -c /tmp/horusmapper.cfg"'
     # devices:
     #   - "/dev/ttyACM0:/dev/ttyUSB0"
     volumes:
@@ -308,8 +323,10 @@ services:
   #     multiprocessing pool and uploads. Comment/uncomment to switch.
   horus-server:
     <<: *horus-server
-    # command: 'python3 /usr/local/bin/uploader_server.py -c /user.cfg --tcp-port 4921'
-    command: 'python3 -m horusdemodlib.server -c /user.cfg --tcp-port 4921'  # AUDIO-SERVER method
+    # render_user_cfg.sh fills callsign/comments from MYCALL/RADIO_COMMENT/
+    # ANTENNA_COMMENT into /tmp/user.cfg, then exec's the server (-c points at it).
+    # command: '/usr/bin/render_user_cfg.sh python3 /usr/local/bin/uploader_server.py -c /tmp/user.cfg --tcp-port 4921'
+    command: '/usr/bin/render_user_cfg.sh python3 -m horusdemodlib.server -c /tmp/user.cfg --tcp-port 4921'  # AUDIO-SERVER method
 
   # Receiver instance name (e.g. "horus-434200" or "wenet-443500")
   horus-432500:
