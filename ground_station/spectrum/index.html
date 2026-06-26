@@ -215,7 +215,7 @@ let frame = null;        // latest raw {t,f0,bw,n,p}
 let disp = null;         // displayed dB array (smoothed, or === frame.p when τ=0)
 let emaLin = null;       // IIR state, linear power per bin
 let lastEmaT = 0;
-let smoothTau = 0.2;
+let smoothTau = 0.1;
 let tauTouched = false;
 let hold = null;         // Float64Array max-hold (of disp)
 let holdOn = false;
