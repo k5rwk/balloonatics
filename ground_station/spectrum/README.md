@@ -11,8 +11,13 @@ and a scrolling waterfall on a `<canvas>` with no external JS.
 
 ```
 radiod  ──status multicast──>  powers  ──stdout──>  server.py  ──SSE──>  browser
-        (rtl-sdr.local)        (FFT bins, dB)       (parse+fan-out)      (canvas)
+        (rtl-sdr.local)        (FFT bins, dB)    (parse + fan-out raw)   (IIR smooth,
+                                                  + optional CSV log)     trace, waterfall,
+                                                                          markers)
 ```
+
+The raw per-frame FFTs go to the browser, which does the IIR smoothing, rendering,
+markers and readouts. The server can also log the raw frames to CSV for replay.
 
 ## Running
 
@@ -29,30 +34,40 @@ Like every other ka9q consumer it uses **host networking** (needed for the
 multicast), so it binds `PORT` directly on the host and resolves radiod's
 `*.local` status group through the shared, containerised avahi.
 
+## Tuning is derived from radiod.conf
+
+Center frequency, span and the status group are **read from
+[`radiod.conf`](../ka9q-radio/radiod.conf)** (mounted into the container), so the
+SDR tuning lives in exactly one place and never has to be copied into compose.
+Following ka9q semantics: `[global] status` is the multicast group, `[global]
+hardware` names the device section, and that section's `frequency` / `samprate`
+give the center and span. The span becomes `samprate`, so `BINS = samprate /
+BIN_WIDTH` covers the whole receiver passband. Switch the SDR (e.g. rtlsdr →
+sdrplay with a 4 MHz samprate) and the analyzer follows automatically. Any of
+`FREQUENCY` / `BINS` / `MCAST` still overrides if set explicitly.
+
 ## Configuration
 
 All via environment variables (set in `docker-compose.yml`):
 
-| Var          | Default          | Meaning                                                |
-|--------------|------------------|--------------------------------------------------------|
-| `PORT`       | `8000`           | HTTP port (bound directly on the host)                 |
-| `MCAST`      | `rtl-sdr.local`  | radiod status multicast group                          |
-| `SSRC`       | `7438`           | SSRC for the transient spectrum channel                |
-| `FREQUENCY`  | `432000000`      | center frequency, Hz (default = the RTL SDR center)    |
-| `BIN_WIDTH`  | `1000`           | resolution bandwidth per bin, Hz                       |
-| `BINS`       | `2400`           | number of FFT bins (`BINS * BIN_WIDTH` = total span)   |
-| `INTERVAL`   | `0.025`          | seconds between FFT polls = display update rate        |
-| `SMOOTHING`  | `0.2`            | IIR integration time constant τ, seconds (see below)   |
-| `CROSSOVER`  | _span_           | rbw threshold for narrowband mode (see note below)     |
-| `SOURCE`     | _unset_          | optional `powers -o` source name/address               |
-| `POWERS_BIN` | `powers`         | path to the powers binary                              |
-| `POWERS_ARGS`| _unset_          | full override of the powers args (after the binary)    |
-| `REPLAY_FILE`| _unset_          | replay a saved powers log instead of running `powers`  |
-
-The default span (`2400 × 1000 Hz` = 2.4 MHz centered on 432 MHz) matches the
-RTL-SDR passband in [`radiod.conf`](../ka9q-radio/radiod.conf) (`samprate =
-2400000`), so it shows the whole receiver bandwidth, including the horus channels
-(432.5–433.0) and the APRS channel (433.0).
+| Var           | Default            | Meaning                                                |
+|---------------|--------------------|--------------------------------------------------------|
+| `PORT`        | `8000`             | HTTP port (bound directly on the host)                 |
+| `BIN_WIDTH`   | `1000`             | resolution bandwidth per bin, Hz (span = samprate/this)|
+| `INTERVAL`    | `0.025`            | seconds between FFT polls = display update rate        |
+| `SMOOTHING`   | `0.2`              | **default** IIR τ (s) for the browser (adjust live)    |
+| `LOG_DIR`     | `/data`            | directory for spectrum CSV logs (mount a volume)       |
+| `LOG_INTERVAL`| `0`                | if >0, auto-start logging at this period (s)           |
+| `RADIOD_CONF` | `/etc/radio/radiod.conf` | radiod.conf to derive tuning from                |
+| `FREQUENCY`   | _radiod.conf_      | center frequency, Hz — override                        |
+| `BINS`        | _samprate/BIN_WIDTH_ | number of FFT bins — override                        |
+| `MCAST`       | _radiod.conf_      | radiod status multicast group — override               |
+| `SSRC`        | `7438`             | SSRC for the transient spectrum channel                |
+| `CROSSOVER`   | _span_             | rbw threshold for narrowband mode (see note below)     |
+| `SOURCE`      | _unset_            | optional `powers -o` source name/address               |
+| `POWERS_BIN`  | `powers`           | path to the powers binary                              |
+| `POWERS_ARGS` | _unset_            | full override of the powers args (after the binary)    |
+| `REPLAY_FILE` | _unset_            | replay a saved powers/log CSV instead of running powers|
 
 To change the port, edit `PORT` under the `spectrum` service in
 `docker-compose.yml`.
@@ -61,25 +76,49 @@ To change the port, edit `PORT` under the `spectrum` service in
 
 - **auto dB** — track the noise floor / peak automatically (uncheck to set
   `min`/`max` by hand). **contrast** squeezes the color window for punch.
+- **τ (s)** — IIR smoothing time constant, live (0 = raw); see below.
 - **max hold** — overlay the per-bin peak hold on the trace.
 - **pause** — freeze the display (the feed keeps running).
 - Hover anywhere to read the frequency and power under the cursor.
 
-## Demo without an SDR
+### Markers
 
-Point `REPLAY_FILE` at a captured `powers` log to loop it (no radiod needed):
+- **Click** the plot to drop a marker; **drag** it to move; **✕** (in the panel)
+  or **clear ✕** removes them.
+- A point marker reads out the power at its frequency. Give a marker a
+  **bandwidth** (the `kHz` box in its panel row, or tick **band** before dropping
+  so new markers start with the default bandwidth) to turn it into a **PSD /
+  channel-power marker**: it then reports the integrated power across the band
+  (`dB`), the power spectral density (`dB/Hz`) and the in-band peak.
+- Powers from `powers` are uncalibrated, so marker readouts are **relative** dB.
+
+### Logging a flight
+
+- Set the **log** interval (s) and hit **start log** to record; **logs ▾** lists
+  saved files with download links. Or auto-start at boot with `LOG_INTERVAL`.
+- Logs are written as the **same CSV format `powers` emits**, so to review a
+  flight afterwards just point `REPLAY_FILE` at the file and the whole UI
+  (waterfall, markers, PSD) replays it — see below.
+
+## Replay a logged flight (or demo without an SDR)
+
+Point `REPLAY_FILE` at a captured log (or any `powers` CSV) to loop it through the
+full UI — no radiod or SDR needed:
 
 ```sh
 docker run --rm -p 8000:8000 \
-  -e REPLAY_FILE=/sample.log -v /path/to/log_powers_ka9q-radio:/sample.log:ro \
+  -e REPLAY_FILE=/flight.csv -v /path/to/spectrum-20260626T....csv:/flight.csv:ro \
   balloonatics/spectrum:local
 ```
 
-## Integration period (SMOOTHING)
+Because logs and `powers` share one CSV format, anything the analyzer records is
+directly replayable here.
+
+## Integration period (SMOOTHING / τ)
 
 Each `powers` frame is a *single* FFT block (~1 ms of samples for the default
 config) — `powers` doesn't expose radiod's `SPECTRUM_AVG`, so it never integrates
-server-side, and a raw trace is noisy. We integrate **client-side** with an IIR
+server-side, and a raw trace is noisy. The **browser** integrates with an IIR
 (exponential) filter, per bin, in **linear power** (unbiased; smoothing dB
 directly would skew toward the nulls):
 
@@ -87,13 +126,14 @@ directly would skew toward the nulls):
 ema += alpha * (x - ema),   alpha = 1 - e^(-dt/tau)
 ```
 
-`tau` is `SMOOTHING` (seconds) and `dt` is the *measured* interval between frames,
-so the amount of integration is independent of the frame rate / jitter. Unlike
-boxcar averaging, this **decouples integration from update rate**: the display
-refreshes every `INTERVAL` (40 Hz by default) but each frame carries ~`tau` of
-integration, cutting the noise like averaging ~`tau/INTERVAL` independent FFTs
-(≈ 8 at the defaults). Raise `SMOOTHING` for a smoother, slower-reacting trace;
-set it to `0` to show the raw per-frame FFT.
+`tau` is the **τ (s)** control (initialised from `SMOOTHING`) and `dt` is the
+*measured* interval between frames, so the amount of integration is independent of
+the frame rate / jitter. Unlike boxcar averaging, this **decouples integration from
+update rate**: the display refreshes every `INTERVAL` (40 Hz by default) but each
+frame carries ~`tau` of integration, cutting the noise like averaging ~`tau/INTERVAL`
+independent FFTs (≈ 8 at the defaults, measured ~2.8× / √8). Raise τ for a smoother,
+slower-reacting trace; set it to `0` to show the raw per-frame FFT. Doing the
+smoothing client-side means it is adjustable live and the **logs capture raw data**.
 
 Because the same smoothed stream drives the waterfall, a brief signal leaves a
 short (~`tau`) vertical tail — usually helpful for catching weak carriers, and
