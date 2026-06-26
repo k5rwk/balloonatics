@@ -223,12 +223,12 @@ services:
     environment:
       <<: [*common-variables, *wenet-env]
       RXFREQ: 431200000
-      DEVICE: 'wenet-1-pcm.local'
+      DEVICE: 'wenet-431200-pcm.local'
       IMAGE_PORT: 7891
       WEB_PORT: 5003
     volumes:
       - type: 'bind'
-        source: './wenet-1/rx_images/'
+        source: './wenet-431200/rx_images/'
         target: '/opt/wenet/rx_images/'
       - *avahi-vol
 
@@ -237,12 +237,12 @@ services:
     environment:
       <<: [*common-variables, *wenet-env]
       RXFREQ: 431500000
-      DEVICE: 'wenet-2-pcm.local'
+      DEVICE: 'wenet-431500-pcm.local'
       IMAGE_PORT: 7892
       WEB_PORT: 5004
     volumes:
       - type: 'bind'
-        source: './wenet-2/rx_images/'
+        source: './wenet-431500/rx_images/'
         target: '/opt/wenet/rx_images/'
       - *avahi-vol
 
@@ -251,12 +251,12 @@ services:
     environment:
       <<: [*common-variables, *wenet-env]
       RXFREQ: 431800000
-      DEVICE: 'wenet-3-pcm.local'
+      DEVICE: 'wenet-431800-pcm.local'
       IMAGE_PORT: 7893
       WEB_PORT: 5005
     volumes:
       - type: 'bind'
-        source: './wenet-3/rx_images/'
+        source: './wenet-431800/rx_images/'
         target: '/opt/wenet/rx_images/'
       - *avahi-vol
 
