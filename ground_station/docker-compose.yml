@@ -144,30 +144,32 @@ services:
         target: '/run/dbus'
 
   # Web spectrum analyzer: drives ka9q-radio's `powers` against the SDR status
-  # group (rtl-sdr.local) and serves a live FFT + waterfall over HTTP/SSE.
-  # Uses host networking (multicast), so it binds PORT directly on the host --
-  # change PORT below to move it (default 8000). Resolves *.local via the shared
-  # avahi socket, like the horus feeders.
+  # group and serves a live FFT + waterfall over HTTP/SSE. Uses host networking
+  # (multicast), so it binds PORT directly on the host -- change PORT to move it
+  # (default 8000). Resolves *.local via the shared avahi socket, like the feeders.
+  #
+  # Center frequency, span (-> bins) and the status group are DERIVED from the
+  # mounted radiod.conf, so tuning lives in one place. BIN_WIDTH (resolution) and
+  # the display/integration knobs are the only things set here. Logs (LOG_DIR)
+  # are written as replayable powers CSV for after-the-fact flight review.
   spectrum:
     build: ./spectrum
     image: balloonatics/spectrum:local
     restart: 'always'
     environment:
       PORT: 8000
-      MCAST: rtl-sdr.local
-      SSRC: 7438
-      FREQUENCY: 432000000   # SDR center; see ka9q-radio/radiod.conf [sdr]
-      BIN_WIDTH: 1000        # Hz per FFT bin
-      BINS: 2400             # 2400 * 1000 Hz = 2.4 MHz span (full RTL passband)
+      BIN_WIDTH: 1000        # Hz per FFT bin (resolution); span = samprate / this
       INTERVAL: 0.025        # seconds between FFT polls = display update rate (40 Hz)
-      SMOOTHING: 0.1         # IIR time constant (s); continuous updates, ~0.1s of
-                            # integration. 0 disables; raise for a smoother trace.
-      # CROSSOVER defaults to the full span (forces powers' narrowband path so the
-      # whole two-sided spectrum is shown, not just the positive half). Override
-      # only if you know you want the wideband path. See spectrum/README.md.
-      # CROSSOVER: 2400000
+      SMOOTHING: 0.2         # default browser IIR tau (s); adjustable live in the UI
+      LOG_DIR: /data         # where spectrum CSV logs are written
+      LOG_INTERVAL: 0        # >0 (seconds) auto-starts logging at boot
+      # FREQUENCY / BINS / MCAST auto-derive from radiod.conf below; set them here
+      # only to override. CROSSOVER defaults to the full span (forces powers'
+      # narrowband path -> full two-sided spectrum); see spectrum/README.md.
     volumes:
       - *avahi-vol
+      - ./ka9q-radio/radiod.conf:/etc/radio/radiod.conf:ro
+      - ./spectrum/logs:/data
     depends_on:
       - avahi
       - ka9q-radio

@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>ka9q-radio spectrum</title>
 <style>
   :root {
@@ -14,33 +14,39 @@
     --accent: #4fd1c5;
     --trace: #ffd166;
     --hold: #ef476f;
+    --marker: #4fd1c5;
   }
   * { box-sizing: border-box; }
   html, body { margin: 0; height: 100%; }
   body {
     background: var(--bg); color: var(--ink);
     font: 13px/1.4 system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
-    display: flex; flex-direction: column; height: 100vh; overflow: hidden;
+    display: flex; flex-direction: column; overflow: hidden;
+    height: 100vh;          /* fallback */
+    height: 100dvh;         /* exclude the mobile browser's dynamic chrome (address bar) */
   }
   header {
-    display: flex; align-items: center; gap: 16px; flex-wrap: wrap;
+    display: flex; align-items: center; gap: 14px 16px; flex-wrap: wrap;
     padding: 8px 14px; background: var(--panel);
     border-bottom: 1px solid var(--grid);
   }
   header h1 { font-size: 14px; font-weight: 600; margin: 0; letter-spacing: .3px; }
-  header h1 .sub { color: var(--muted); font-weight: 400; margin-left: 8px; }
+  header h1 .sub { color: var(--muted); font-weight: 400; margin-left: 8px; font-size: 12px; }
   .ctl { display: flex; align-items: center; gap: 6px; color: var(--muted); }
   .ctl label { white-space: nowrap; }
   .ctl input[type=number] {
     width: 58px; background: var(--bg); color: var(--ink);
     border: 1px solid var(--grid); border-radius: 4px; padding: 3px 5px;
   }
-  .ctl input[type=range] { width: 110px; }
+  .ctl input[type=number].sm { width: 66px; }
+  .ctl input[type=range] { width: 100px; }
+  .sep { width: 1px; align-self: stretch; background: var(--grid); }
   button {
     background: var(--bg); color: var(--ink); border: 1px solid var(--grid);
     border-radius: 4px; padding: 4px 10px; cursor: pointer;
   }
   button.on { border-color: var(--accent); color: var(--accent); }
+  button.rec.on { border-color: var(--hold); color: var(--hold); }
   .spacer { flex: 1; }
   .status { color: var(--muted); font-variant-numeric: tabular-nums; }
   .status .dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%;
@@ -48,9 +54,10 @@
   .status .dot.live { background: var(--accent); }
   .status .dot.stale { background: var(--hold); }
   #stage { position: relative; flex: 1; min-height: 0; }
-  canvas { display: block; width: 100%; position: absolute; left: 0; }
+  canvas { display: block; width: 100%; position: absolute; left: 0; touch-action: none; }
   #spectrum { top: 0; height: 34%; }
   #waterfall { top: 34%; height: 66%; image-rendering: pixelated; }
+  #overlay { top: 0; height: 100%; pointer-events: none; z-index: 3; }
   #readout {
     position: absolute; top: 6px; right: 10px; padding: 4px 8px;
     background: rgba(11,14,20,.78); border: 1px solid var(--grid); border-radius: 5px;
@@ -59,25 +66,95 @@
   }
   #cursor { position: absolute; top: 0; bottom: 0; width: 1px;
     background: rgba(255,255,255,.35); pointer-events: none; z-index: 4; display: none; }
+  /* markers panel */
+  #markerPanel {
+    position: absolute; top: 8px; left: 8px; z-index: 6;
+    width: max-content; max-width: min(680px, 72vw); overflow-x: auto;
+    background: rgba(11,14,20,.85); border: 1px solid var(--grid); border-radius: 6px;
+    padding: 6px 8px; display: none; font-variant-numeric: tabular-nums;
+  }
+  #markerPanel.show { display: block; }
+  #markerPanel .mhdr { display: flex; align-items: center; gap: 8px;
+    color: var(--muted); margin-bottom: 4px; }
+  #markerPanel .mhdr b { color: var(--ink); }
+  #markerPanel table { border-collapse: collapse; }
+  #markerPanel td { padding: 2px 6px 2px 0; white-space: nowrap; }
+  #markerPanel .tag { color: var(--marker); font-weight: 600; }
+  #markerPanel .rd { color: var(--ink); }
+  #markerPanel input[type=number] { width: 64px; background: var(--bg); color: var(--ink);
+    border: 1px solid var(--grid); border-radius: 4px; padding: 2px 4px; }
+  #markerPanel .x { cursor: pointer; color: var(--muted); padding: 0 4px; }
+  #markerPanel .x:hover { color: var(--hold); }
+  .hint { color: var(--muted); font-size: 11px; }
+  /* logs list */
+  #logList { position: absolute; top: 100%; right: 0; margin-top: 4px; z-index: 7;
+    background: var(--panel); border: 1px solid var(--grid); border-radius: 6px;
+    padding: 8px 10px; min-width: 240px; max-height: 50vh; overflow: auto; display: none; }
+  #logList.show { display: block; }
+  #logList a { color: var(--accent); text-decoration: none; }
+  #logList a:hover { text-decoration: underline; }
+  .logwrap { position: relative; }
+  .muted { color: var(--muted); }
+  /* controls collapse behind a menu button on narrow screens */
+  #menuBtn { display: none; font-size: 16px; line-height: 1; padding: 4px 9px; }
+  #controls { display: flex; flex-wrap: wrap; align-items: center; gap: 14px 16px; }
+  @media (max-width: 860px) {
+    header { gap: 8px 12px; }
+    #menuBtn { display: inline-block; }
+    #controls { display: none; flex-basis: 100%; flex-direction: column;
+      align-items: stretch; gap: 10px; margin-top: 4px; }
+    #controls.open { display: flex; }
+    #controls .sep { display: none; }
+    #controls .ctl { flex-wrap: wrap; }
+    /* markers panel docks to the bottom on mobile, clear of the home indicator */
+    #markerPanel { top: auto; bottom: calc(8px + env(safe-area-inset-bottom));
+      left: 8px; right: 8px; width: auto; max-width: none; max-height: 45vh; overflow: auto; }
+    /* drop the spectrum parameters (center/span/bins...) until the menu is open */
+    h1 .sub { display: none; }
+    #rate { display: none; }
+    body.menu-open h1 .sub { display: inline; }
+    body.menu-open #rate { display: inline; }
+  }
 </style>
 </head>
 <body>
 <header>
+  <button id="menuBtn" aria-label="toggle controls" title="controls">☰</button>
   <h1>ka9q-radio spectrum<span class="sub" id="tuning">—</span></h1>
 
-  <div class="ctl">
-    <label><input type="checkbox" id="autoscale" checked> auto dB</label>
+  <div id="controls">
+    <div class="ctl">
+      <label><input type="checkbox" id="autoscale"> auto dB</label>
+      <label>min</label><input type="number" id="dbmin" value="-70" step="1">
+      <label>max</label><input type="number" id="dbmax" value="-20" step="1">
+    </div>
+    <div class="ctl">
+      <label title="waterfall gain: scales the color window's min/max about its midpoint (1 = no change)">wf gain</label>
+      <input type="range" id="contrast" min="0.25" max="4" value="1" step="0.05">
+    </div>
+    <div class="ctl">
+      <label>τ&nbsp;(s)</label><input type="number" id="tau" class="sm" value="0.1" min="0" step="0.05" title="IIR smoothing time constant (0 = off)">
+    </div>
+    <button id="maxhold">max hold</button>
+    <button id="pause">pause</button>
+
+    <div class="sep"></div>
+    <div class="ctl">
+      <label title="new markers get a bandwidth (PSD / channel-power marker)"><input type="checkbox" id="dropBand"> Marker BW</label>
+      <input type="number" id="defBw" class="sm" value="3" min="0" step="0.5" title="default marker bandwidth (kHz)"><span class="muted">kHz</span>
+      <button id="clearMarkers" title="remove all markers">clear ✕</button>
+    </div>
+
+    <div class="sep"></div>
+    <div class="ctl logwrap">
+      <label>log</label>
+      <input type="number" id="logInterval" class="sm" value="1" min="0.1" step="0.5" title="logging interval (s)"><span class="muted">s</span>
+      <button id="logToggle" class="rec">start log</button>
+      <button id="logsBtn" title="saved logs">logs ▾</button>
+      <span class="status" id="logStatus">idle</span>
+      <div id="logList"></div>
+    </div>
   </div>
-  <div class="ctl">
-    <label>min</label><input type="number" id="dbmin" value="-110" step="1">
-    <label>max</label><input type="number" id="dbmax" value="-40" step="1">
-  </div>
-  <div class="ctl">
-    <label>contrast</label>
-    <input type="range" id="contrast" min="-20" max="20" value="0" step="1">
-  </div>
-  <button id="maxhold">max hold</button>
-  <button id="pause">pause</button>
 
   <div class="spacer"></div>
   <div class="status">
@@ -88,8 +165,13 @@
 <div id="stage">
   <canvas id="spectrum"></canvas>
   <canvas id="waterfall"></canvas>
+  <canvas id="overlay"></canvas>
   <div id="cursor"></div>
   <div id="readout" style="display:none"></div>
+  <div id="markerPanel">
+    <div class="mhdr"><b>Markers</b> <span class="hint">click plot to add · drag to move</span></div>
+    <table><tbody id="markerRows"></tbody></table>
+  </div>
 </div>
 
 <script>
@@ -98,37 +180,59 @@
 // ---- DOM ----
 const specCanvas = document.getElementById("spectrum");
 const wfCanvas   = document.getElementById("waterfall");
+const ovCanvas   = document.getElementById("overlay");
 const sctx = specCanvas.getContext("2d");
 const wctx = wfCanvas.getContext("2d", { willReadFrequently: false });
+const octx = ovCanvas.getContext("2d");
+const stage = document.getElementById("stage");
 const els = {
   tuning: document.getElementById("tuning"),
   autoscale: document.getElementById("autoscale"),
   dbmin: document.getElementById("dbmin"),
   dbmax: document.getElementById("dbmax"),
   contrast: document.getElementById("contrast"),
+  tau: document.getElementById("tau"),
   maxhold: document.getElementById("maxhold"),
   pause: document.getElementById("pause"),
+  dropBand: document.getElementById("dropBand"),
+  defBw: document.getElementById("defBw"),
+  clearMarkers: document.getElementById("clearMarkers"),
+  logInterval: document.getElementById("logInterval"),
+  logToggle: document.getElementById("logToggle"),
+  logsBtn: document.getElementById("logsBtn"),
+  logStatus: document.getElementById("logStatus"),
+  logList: document.getElementById("logList"),
   dot: document.getElementById("dot"),
   rate: document.getElementById("rate"),
   readout: document.getElementById("readout"),
   cursor: document.getElementById("cursor"),
+  markerPanel: document.getElementById("markerPanel"),
+  markerRows: document.getElementById("markerRows"),
 };
 
 // ---- state ----
-let frame = null;        // latest {t,f0,bw,n,p}
-let hold = null;         // Float32Array max-hold
+let frame = null;        // latest raw {t,f0,bw,n,p}
+let disp = null;         // displayed dB array (smoothed, or === frame.p when τ=0)
+let emaLin = null;       // IIR state, linear power per bin
+let lastEmaT = 0;
+let smoothTau = 0.2;
+let tauTouched = false;
+let hold = null;         // Float64Array max-hold (of disp)
 let holdOn = false;
 let paused = false;
-let cols = 0;            // device-pixel width shared by both canvases
-let colBin = null;       // per-column: index into p[] (peak-picked)
+let cols = 0;            // device-pixel width shared by all canvases
+let colBin = null;       // per-column: index into disp[] (peak-picked)
 let lastFrameTime = 0;
 let frameCount = 0;
-let mouseX = -1;
+
+// markers: {id, freq(Hz), bw(Hz)}  bw>0 => PSD/band marker
+let markers = [];
+let markerId = 0;
+let dragMarker = null, downX = null, downTouch = false;
 
 // ---- colormap (turbo-ish) ----
 const PALETTE = buildPalette();
 function buildPalette() {
-  // Compact turbo approximation -> 256 RGB entries.
   const stops = [
     [0.00, 48, 18, 59], [0.13, 70, 70, 175], [0.25, 39, 150, 235],
     [0.38, 24, 213, 196], [0.50, 95, 232, 95], [0.63, 188, 222, 35],
@@ -151,53 +255,76 @@ function buildPalette() {
 
 // ---- sizing ----
 function resize() {
-  const stage = document.getElementById("stage");
-  const w = stage.clientWidth;
+  const w = stage.clientWidth, h = stage.clientHeight;
   cols = Math.max(1, Math.floor(w));
-  for (const [cv, hpct] of [[specCanvas, .34], [wfCanvas, .66]]) {
-    cv.width = cols;
-    cv.height = Math.max(1, Math.floor(stage.clientHeight * hpct));
-  }
-  colBin = null;             // force remap
-  // Clear waterfall (history geometry changed).
+  specCanvas.width = cols; specCanvas.height = Math.max(1, Math.floor(h * 0.34));
+  wfCanvas.width = cols;   wfCanvas.height   = Math.max(1, Math.floor(h * 0.66));
+  ovCanvas.width = cols;   ovCanvas.height   = Math.max(1, Math.floor(h));
+  colBin = null;
   wctx.fillStyle = "#000";
   wctx.fillRect(0, 0, wfCanvas.width, wfCanvas.height);
-  if (frame) drawSpectrum();
+  if (frame) { drawSpectrum(); drawOverlay(); }
 }
 window.addEventListener("resize", resize);
 
-// Map each output column to the source bin whose value it shows. When there are
-// more bins than columns we peak-pick across the covered bins so narrow signals
-// survive the downsample.
 function buildColMap() {
   colBin = new Int32Array(cols);
-  for (let x = 0; x < cols; x++) {
+  for (let x = 0; x < cols; x++)
     colBin[x] = Math.min(frame.n - 1, Math.floor(x * frame.n / cols));
-  }
 }
-function columnDb(x) {
-  // dB shown for column x: peak over the bins it covers.
-  const lo = colBin[x];
-  const hi = (x + 1 < cols) ? colBin[x + 1] : frame.n;
+function colPeak(arr, x) {
+  const lo = colBin[x], hi = (x + 1 < cols) ? colBin[x + 1] : frame.n;
   let m = -Infinity;
-  for (let i = lo; i < hi; i++) if (frame.p[i] > m) m = frame.p[i];
-  if (m === -Infinity) m = frame.p[lo];
-  return m;
+  for (let i = lo; i < hi; i++) if (arr[i] > m) m = arr[i];
+  return m === -Infinity ? arr[lo] : m;
+}
+
+// freq <-> pixel helpers
+function span() { return frame.bw * frame.n; }
+function freqToXdev(f) { return ((f - frame.f0) / span()) * cols; }
+function freqToXcss(f) { return ((f - frame.f0) / span()) * stage.clientWidth; }
+function xCssToFreq(x) { return frame.f0 + (x / stage.clientWidth) * span(); }
+function binAtFreq(f) { return Math.max(0, Math.min(frame.n - 1, Math.round((f - frame.f0) / frame.bw))); }
+
+// ---- client-side IIR smoothing (in linear power) ----
+function applySmoothing(f) {
+  if (!(smoothTau > 0)) { disp = f.p; emaLin = null; return; }
+  const now = performance.now() / 1000;
+  if (!emaLin || emaLin.length !== f.n) {
+    emaLin = new Float64Array(f.n);
+    for (let i = 0; i < f.n; i++) emaLin[i] = Math.pow(10, f.p[i] * 0.1);
+    lastEmaT = now;
+  } else {
+    const a = 1 - Math.exp(-(now - lastEmaT) / smoothTau);
+    lastEmaT = now;
+    for (let i = 0; i < f.n; i++)
+      emaLin[i] += a * (Math.pow(10, f.p[i] * 0.1) - emaLin[i]);
+  }
+  if (!disp || disp.length !== f.n) disp = new Float64Array(f.n);
+  for (let i = 0; i < f.n; i++) { const v = emaLin[i]; disp[i] = v > 0 ? 10 * Math.log10(v) : -200; }
 }
 
 // ---- dB scaling ----
 function scaleRange() {
   let lo = parseFloat(els.dbmin.value);
   let hi = parseFloat(els.dbmax.value);
-  const c = parseFloat(els.contrast.value);   // squeeze the window for punch
-  lo += c; hi -= c;
   if (hi - lo < 5) hi = lo + 5;
   return [lo, hi];
 }
-
+// Waterfall-only color window: keep the midpoint fixed and scale the distance to
+// min/max by the "wf gain" multiplier. gain<1 compresses the window (more punch),
+// gain>1 expands it.
+function waterfallRange() {
+  const [lo, hi] = scaleRange();
+  const mid = (lo + hi) / 2;
+  const g = parseFloat(els.contrast.value) || 1;
+  let wlo = mid + (lo - mid) * g;
+  let whi = mid + (hi - mid) * g;
+  if (whi - wlo < 1) whi = wlo + 1;
+  return [wlo, whi];
+}
 function autoscale() {
-  // Robust min (low percentile -> noise floor) and max from the live frame.
-  const p = frame.p, n = frame.n;
+  const p = disp, n = frame.n;
   const step = Math.max(1, (n / 2048) | 0);
   const arr = [];
   for (let i = 0; i < n; i += step) arr.push(p[i]);
@@ -206,74 +333,69 @@ function autoscale() {
   const peak  = arr[arr.length - 1];
   const lo = Math.round(floor - 4);
   const hi = Math.round(Math.max(peak + 6, lo + 20));
-  // Smooth toward the target so the colors don't jitter every frame.
   const cur = [parseFloat(els.dbmin.value), parseFloat(els.dbmax.value)];
   els.dbmin.value = Math.round(cur[0] + (lo - cur[0]) * 0.25);
   els.dbmax.value = Math.round(cur[1] + (hi - cur[1]) * 0.25);
 }
 
-// ---- rendering ----
+// ---- frame handling ----
 function onFrame(f) {
   frame = f;
   frameCount++;
   lastFrameTime = performance.now();
   if (!colBin || colBin.length !== cols) buildColMap();
+  applySmoothing(f);
 
   if (holdOn) {
-    if (!hold || hold.length !== f.n) hold = Float32Array.from(f.p);
-    else for (let i = 0; i < f.n; i++) if (f.p[i] > hold[i]) hold[i] = f.p[i];
+    if (!hold || hold.length !== f.n) hold = Float64Array.from(disp);
+    else for (let i = 0; i < f.n; i++) if (disp[i] > hold[i]) hold[i] = disp[i];
   }
   if (els.autoscale.checked) autoscale();
 
   if (!paused) {
     drawSpectrum();
     drawWaterfallRow();
+    drawOverlay();
   }
 }
 
 function drawSpectrum() {
   const W = specCanvas.width, H = specCanvas.height;
   const [lo, hi] = scaleRange();
-  const span = hi - lo;
+  const sp = hi - lo;
   sctx.fillStyle = "#0b0e14";
   sctx.fillRect(0, 0, W, H);
 
-  // dB grid + labels
   sctx.strokeStyle = "#273043";
   sctx.fillStyle = "#8893a7";
   sctx.lineWidth = 1;
   sctx.font = "10px system-ui, sans-serif";
   sctx.textBaseline = "bottom";
-  const ddb = niceStep(span, 5);
+  const ddb = niceStep(sp, 5);
   for (let db = Math.ceil(lo / ddb) * ddb; db <= hi; db += ddb) {
-    const y = Math.round(H - ((db - lo) / span) * H) + 0.5;
+    const y = Math.round(H - ((db - lo) / sp) * H) + 0.5;
     sctx.beginPath(); sctx.moveTo(0, y); sctx.lineTo(W, y); sctx.stroke();
     sctx.fillText(db + " dB", 4, y - 1);
   }
-  // frequency grid + labels
   drawFreqGrid(sctx, W, H, true);
 
-  const y = (db) => H - ((db - lo) / span) * H;
+  const y = (db) => H - ((db - lo) / sp) * H;
 
-  // max-hold trace behind the live trace
   if (holdOn && hold) {
     sctx.strokeStyle = "#ef476f";
     sctx.beginPath();
     for (let x = 0; x < cols; x++) {
-      const lo2 = colBin[x], hi2 = (x + 1 < cols) ? colBin[x + 1] : frame.n;
-      let m = -Infinity;
-      for (let i = lo2; i < hi2; i++) if (hold[i] > m) m = hold[i];
-      x === 0 ? sctx.moveTo(x, y(m)) : sctx.lineTo(x, y(m));
+      const v = colPeak(hold, x);
+      x === 0 ? sctx.moveTo(x, y(v)) : sctx.lineTo(x, y(v));
     }
     sctx.stroke();
   }
 
-  // live trace
   sctx.strokeStyle = "#ffd166";
   sctx.lineWidth = 1;
   sctx.beginPath();
   for (let x = 0; x < cols; x++) {
-    const v = columnDb(x);
+    const v = colPeak(disp, x);
     x === 0 ? sctx.moveTo(x, y(v)) : sctx.lineTo(x, y(v));
   }
   sctx.stroke();
@@ -281,8 +403,7 @@ function drawSpectrum() {
 
 function drawFreqGrid(ctx, W, H, labels) {
   if (!frame) return;
-  const f0 = frame.f0, fspan = frame.bw * frame.n;
-  const startMHz = f0 / 1e6, spanMHz = fspan / 1e6;
+  const startMHz = frame.f0 / 1e6, spanMHz = span() / 1e6;
   const stepMHz = niceStep(spanMHz, 6);
   ctx.strokeStyle = "#273043";
   ctx.fillStyle = "#8893a7";
@@ -301,14 +422,13 @@ function drawFreqGrid(ctx, W, H, labels) {
 
 function drawWaterfallRow() {
   const W = wfCanvas.width, H = wfCanvas.height;
-  const [lo, hi] = scaleRange();
+  const [lo, hi] = waterfallRange();
   const inv = 255 / (hi - lo);
-  // scroll everything down by one pixel, newest row at the top
-  wctx.drawImage(wfCanvas, 0, 1);
+  wctx.drawImage(wfCanvas, 0, 1);   // scroll down, newest on top
   const row = wctx.createImageData(W, 1);
   const d = row.data;
   for (let x = 0; x < W; x++) {
-    let idx = ((columnDb(x) - lo) * inv) | 0;
+    let idx = ((colPeak(disp, x) - lo) * inv) | 0;
     if (idx < 0) idx = 0; else if (idx > 255) idx = 255;
     const p = idx * 3, o = x * 4;
     d[o] = PALETTE[p]; d[o+1] = PALETTE[p+1]; d[o+2] = PALETTE[p+2]; d[o+3] = 255;
@@ -316,29 +436,182 @@ function drawWaterfallRow() {
   wctx.putImageData(row, 0, 0);
 }
 
-function niceStep(span, target) {
-  const raw = span / target;
+function niceStep(s, target) {
+  const raw = s / target;
   const mag = Math.pow(10, Math.floor(Math.log10(raw)));
   const norm = raw / mag;
   const step = norm < 1.5 ? 1 : norm < 3.5 ? 2 : norm < 7.5 ? 5 : 10;
   return step * mag;
 }
 
-// ---- status line ----
-setInterval(() => {
-  if (!lastFrameTime) return;
-  const age = (performance.now() - lastFrameTime) / 1000;
-  els.dot.className = "dot " + (age > 5 ? "stale" : "live");
-  els.rate.textContent = frame
-    ? `${frame.n} bins · ${(frame.bw).toFixed(0)} Hz/bin · ${frameCount} frames · ${age.toFixed(1)}s ago`
-    : "no data";
-}, 500);
+// ---- markers ----
+function markerInfo(m) {
+  if (!frame || !disp) return null;
+  if (m.bw > 0) {
+    const lo = binAtFreq(m.freq - m.bw / 2);
+    const hi = binAtFreq(m.freq + m.bw / 2);
+    let sum = 0;
+    for (let i = lo; i <= hi; i++) sum += Math.pow(10, disp[i] * 0.1);
+    const pwr = sum > 0 ? 10 * Math.log10(sum) : -Infinity;
+    const psd = sum > 0 ? 10 * Math.log10(sum / m.bw) : -Infinity;
+    return { band: true, freq: m.freq, bw: m.bw, pwr, psd, nbins: hi - lo + 1 };
+  }
+  return { band: false, freq: m.freq, db: disp[binAtFreq(m.freq)] };
+}
 
-// ---- controls ----
-els.maxhold.onclick = () => {
-  holdOn = !holdOn; hold = null;
-  els.maxhold.classList.toggle("on", holdOn);
-};
+function drawOverlay() {
+  const W = ovCanvas.width, H = ovCanvas.height;
+  octx.clearRect(0, 0, W, H);
+  if (!frame) return;
+  octx.font = "10px system-ui, sans-serif";
+  octx.textBaseline = "top";
+  let li = 0;
+  for (const m of markers) {
+    const x = freqToXdev(m.freq);
+    if (x < -1 || x > W + 1) continue;
+    if (m.bw > 0) {
+      const x1 = freqToXdev(m.freq - m.bw / 2), x2 = freqToXdev(m.freq + m.bw / 2);
+      octx.fillStyle = "rgba(79,209,197,0.12)";
+      octx.fillRect(Math.min(x1, x2), 0, Math.max(1, Math.abs(x2 - x1)), H);
+    }
+    octx.strokeStyle = (m === dragMarker) ? "#ffffff" : "#4fd1c5";
+    octx.lineWidth = 1;
+    octx.beginPath(); octx.moveTo(x + 0.5, 0); octx.lineTo(x + 0.5, H); octx.stroke();
+    // staggered label near the top
+    const info = markerInfo(m);
+    let txt = "M" + m.id + " " + (m.freq / 1e6).toFixed(4);
+    if (info) txt += info.band
+      ? `  ${info.pwr.toFixed(1)}dB / ${info.psd.toFixed(1)}dB·Hz⁻¹`
+      : `  ${info.db.toFixed(1)}dB`;
+    const ty = 4 + (li % 6) * 13;
+    const tw = octx.measureText(txt).width;
+    octx.fillStyle = "rgba(11,14,20,.7)";
+    octx.fillRect(x + 3, ty - 1, tw + 6, 12);
+    octx.fillStyle = "#4fd1c5";
+    octx.fillText(txt, x + 6, ty);
+    li++;
+  }
+}
+
+function addMarker(freq) {
+  const bw = els.dropBand.checked ? Math.max(0, parseFloat(els.defBw.value) || 0) * 1000 : 0;
+  markers.push({ id: ++markerId, freq, bw });
+  renderMarkerPanel();
+  drawOverlay();
+}
+function removeMarker(id) {
+  markers = markers.filter(m => m.id !== id);
+  renderMarkerPanel();
+  drawOverlay();
+}
+
+function renderMarkerPanel() {
+  els.markerPanel.classList.toggle("show", markers.length > 0);
+  els.markerRows.innerHTML = "";
+  for (const m of markers) {
+    const tr = document.createElement("tr");
+    const tag = document.createElement("td");
+    tag.className = "tag"; tag.textContent = "M" + m.id;
+    const freqTd = document.createElement("td");
+    const freqIn = document.createElement("input");
+    freqIn.type = "number"; freqIn.step = "0.001";   // 1 kHz steps
+    freqIn.value = (m.freq / 1e6).toFixed(3);
+    freqIn.title = "frequency (MHz)";
+    freqIn.style.width = "84px";
+    freqIn.addEventListener("input", () => {
+      const v = parseFloat(freqIn.value);
+      if (!isNaN(v)) { m.freq = v * 1e6; drawOverlay(); updateMarkerReadouts(); }
+    });
+    freqTd.appendChild(freqIn);
+    const mhz = document.createElement("td"); mhz.className = "muted"; mhz.textContent = "MHz";
+    const bwTd = document.createElement("td");
+    const bwIn = document.createElement("input");
+    bwIn.type = "number"; bwIn.min = "0"; bwIn.step = "0.5";
+    bwIn.value = m.bw ? (m.bw / 1000) : "";
+    bwIn.placeholder = "pt";
+    bwIn.title = "bandwidth (kHz); blank/0 = point marker";
+    bwIn.addEventListener("input", () => {
+      m.bw = Math.max(0, parseFloat(bwIn.value) || 0) * 1000;
+      drawOverlay(); updateMarkerReadouts();
+    });
+    bwTd.appendChild(bwIn);
+    const unit = document.createElement("td"); unit.className = "muted"; unit.textContent = "kHz";
+    const rd = document.createElement("td"); rd.className = "rd"; m._rd = rd;
+    const x = document.createElement("td");
+    x.className = "x"; x.textContent = "✕"; x.title = "remove";
+    x.onclick = () => removeMarker(m.id);
+    tr.append(x, tag, freqTd, mhz, bwTd, unit, rd);
+    els.markerRows.appendChild(tr);
+  }
+  updateMarkerReadouts();
+}
+function updateMarkerReadouts() {
+  for (const m of markers) {
+    if (!m._rd) continue;
+    const info = markerInfo(m);
+    if (!info) { m._rd.textContent = ""; continue; }
+    m._rd.textContent = info.band
+      ? `pwr ${info.pwr.toFixed(1)} dB · psd ${info.psd.toFixed(1)} dB/Hz`
+      : `${info.db.toFixed(1)} dB`;
+  }
+}
+
+// marker interaction via pointer events -> mouse, touch and pen all work
+stage.addEventListener("pointerdown", (e) => {
+  if (!frame) return;
+  if (e.target.closest("#markerPanel")) return;   // don't add/drag from the panel
+  const touch = e.pointerType !== "mouse";
+  const xCss = e.clientX - stage.getBoundingClientRect().left;
+  const hitPx = touch ? 16 : 6;                    // fingers are imprecise
+  const hit = markers.find(m => Math.abs(freqToXcss(m.freq) - xCss) < hitPx);
+  if (hit) { dragMarker = hit; drawOverlay(); e.preventDefault(); }
+  else { downX = xCss; downTouch = touch; }
+});
+window.addEventListener("pointermove", (e) => {
+  if (!dragMarker || !frame) return;
+  let xCss = e.clientX - stage.getBoundingClientRect().left;
+  xCss = Math.max(0, Math.min(stage.clientWidth, xCss));
+  dragMarker.freq = xCssToFreq(xCss);
+  drawOverlay(); renderMarkerPanel();
+});
+window.addEventListener("pointerup", (e) => {
+  if (dragMarker) { dragMarker = null; drawOverlay(); return; }
+  if (downX != null && frame) {
+    const xCss = e.clientX - stage.getBoundingClientRect().left;
+    const slop = downTouch ? 10 : 4;               // ignore finger jitter on a tap
+    if (Math.abs(xCss - downX) < slop && xCss >= 0 && xCss < stage.clientWidth)
+      addMarker(xCssToFreq(xCss));
+    downX = null;
+  }
+});
+els.clearMarkers.onclick = () => { markers = []; renderMarkerPanel(); drawOverlay(); };
+
+// mobile: collapse the control bar behind the menu (☰) button
+const menuBtn = document.getElementById("menuBtn");
+const controls = document.getElementById("controls");
+menuBtn.addEventListener("click", () => {
+  const open = controls.classList.toggle("open");
+  document.body.classList.toggle("menu-open", open);
+});
+// The panel sits over the plot: swallow its mouse events so clicks/drags on the
+// table never fall through to the add-marker handler on the stage.
+for (const ev of ["mousedown", "mouseup", "click", "dblclick", "pointerdown", "pointerup"])
+  els.markerPanel.addEventListener(ev, (e) => e.stopPropagation());
+
+// ---- status line + periodic readout refresh ----
+setInterval(() => {
+  if (lastFrameTime) {
+    const age = (performance.now() - lastFrameTime) / 1000;
+    els.dot.className = "dot " + (age > 5 ? "stale" : "live");
+    els.rate.textContent = frame
+      ? `${frame.n} bins · ${frame.bw.toFixed(0)} Hz/bin · ${frameCount} frames · ${age.toFixed(1)}s ago`
+      : "no data";
+  }
+  updateMarkerReadouts();
+}, 400);
+
+// ---- display controls ----
+els.maxhold.onclick = () => { holdOn = !holdOn; hold = null; els.maxhold.classList.toggle("on", holdOn); };
 els.pause.onclick = () => {
   paused = !paused;
   els.pause.classList.toggle("on", paused);
@@ -349,39 +622,77 @@ els.autoscale.onchange = () => {
   els.dbmin.disabled = dis; els.dbmax.disabled = dis;
 };
 els.autoscale.onchange();
-for (const el of [els.dbmin, els.dbmax, els.contrast])
-  el.addEventListener("input", () => { if (frame && paused) drawSpectrum(); });
+els.tau.addEventListener("input", () => {
+  tauTouched = true;
+  smoothTau = Math.max(0, parseFloat(els.tau.value) || 0);
+});
+for (const el of [els.dbmin, els.dbmax])
+  el.addEventListener("input", () => { if (frame && paused) { drawSpectrum(); drawOverlay(); } });
 
 // ---- hover readout ----
-const stage = document.getElementById("stage");
 stage.addEventListener("mousemove", (e) => {
-  const r = stage.getBoundingClientRect();
-  mouseX = e.clientX - r.left;
-  if (!frame || mouseX < 0 || mouseX >= stage.clientWidth) return hideReadout();
-  const x = Math.floor(mouseX / stage.clientWidth * cols);
-  const bin = colBin ? colBin[Math.min(cols - 1, x)] : 0;
-  const freq = (frame.f0 + bin * frame.bw) / 1e6;
-  const db = frame.p[bin];
+  const xCss = e.clientX - stage.getBoundingClientRect().left;
+  if (!frame || !disp || xCss < 0 || xCss >= stage.clientWidth) return hideReadout();
+  const bin = binAtFreq(xCssToFreq(xCss));
   els.cursor.style.display = "block";
-  els.cursor.style.left = mouseX + "px";
+  els.cursor.style.left = xCss + "px";
   els.readout.style.display = "block";
-  els.readout.textContent = `${freq.toFixed(4)} MHz   ${db.toFixed(1)} dB`;
+  els.readout.textContent = `${((frame.f0 + bin * frame.bw) / 1e6).toFixed(4)} MHz   ${disp[bin].toFixed(1)} dB`;
 });
 stage.addEventListener("mouseleave", hideReadout);
-function hideReadout() {
-  els.cursor.style.display = "none";
-  els.readout.style.display = "none";
+function hideReadout() { els.cursor.style.display = "none"; els.readout.style.display = "none"; }
+
+// ---- logging UI ----
+async function setLog(start) {
+  try {
+    if (start) {
+      const iv = parseFloat(els.logInterval.value) || 1;
+      await fetch("/log/start?interval=" + iv, { method: "POST" });
+    } else {
+      await fetch("/log/stop", { method: "POST" });
+    }
+  } catch (_) {}
+  updateLogUI();
 }
+els.logToggle.onclick = () => setLog(!els.logToggle.classList.contains("on"));
+async function updateLogUI() {
+  try {
+    const s = await (await fetch("/log/status")).json();
+    els.logToggle.classList.toggle("on", s.active);
+    els.logToggle.textContent = s.active ? "stop log" : "start log";
+    els.logStatus.textContent = s.error ? ("err: " + s.error)
+      : s.active ? `● ${s.file} · ${s.lines} rows @ ${s.interval}s` : "idle";
+  } catch (_) {}
+}
+setInterval(updateLogUI, 1500);
+els.logsBtn.onclick = async () => {
+  const show = !els.logList.classList.contains("show");
+  els.logList.classList.toggle("show", show);
+  if (!show) return;
+  try {
+    const items = await (await fetch("/logs")).json();
+    els.logList.innerHTML = items.length
+      ? items.map(it => `<div><a href="/logs/${encodeURIComponent(it.name)}" download>${it.name}</a> <span class="muted">${(it.size/1024).toFixed(0)} KB</span></div>`).join("")
+      : '<span class="muted">no logs yet</span>';
+  } catch (_) { els.logList.innerHTML = '<span class="muted">error</span>'; }
+};
+document.addEventListener("click", (e) => {
+  if (!els.logList.contains(e.target) && e.target !== els.logsBtn)
+    els.logList.classList.remove("show");
+});
 
 // ---- SSE feed ----
 function setTuning(cfg) {
   const c = (cfg.frequency / 1e6).toFixed(3);
-  const span = (cfg.bin_width * cfg.bins / 1e6).toFixed(2);
-  let integ = "";
-  if (cfg.smoothing > 0)
-    integ = ` · τ=${cfg.smoothing}s @ ${(1 / cfg.interval).toFixed(0)} Hz`;
-  els.tuning.textContent = `${c} MHz center · ${span} MHz span${integ} · ${cfg.mcast}` +
-    (cfg.replay ? " · REPLAY" : "");
+  const sp = (cfg.bin_width * cfg.bins / 1e6).toFixed(2);
+  els.tuning.textContent =
+    `${c} MHz center · ${sp} MHz span · ${(1 / cfg.interval).toFixed(0)} Hz · ${cfg.mcast}`
+    + (cfg.tuned_from ? ` · ${cfg.tuned_from}` : "")
+    + (cfg.replay ? " · REPLAY" : "");
+  if (cfg.smoothing != null && !tauTouched) {
+    els.tau.value = cfg.smoothing;
+    smoothTau = Math.max(0, parseFloat(cfg.smoothing) || 0);
+  }
 }
 function connect() {
   const es = new EventSource("/stream");
@@ -392,6 +703,7 @@ function connect() {
 
 resize();
 fetch("/config").then(r => r.json()).then(setTuning).catch(() => {});
+updateLogUI();
 connect();
 </script>
 </body>
