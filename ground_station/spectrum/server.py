@@ -47,6 +47,7 @@ the full span so rbw <= crossover always holds and powers stays on the narrowban
 path, giving a correct two-sided spectrum.
 """
 
+import errno
 import json
 import math
 import os
@@ -389,15 +390,26 @@ def main():
     cfg = Config()
     hub = Hub()
 
+    Handler.cfg = cfg
+    Handler.hub = hub
+    # Bind before launching powers so a port collision fails fast and clean.
+    try:
+        httpd = ThreadingHTTPServer((cfg.bind, cfg.port), Handler)
+    except OSError as e:
+        if e.errno == errno.EADDRINUSE:
+            sys.stderr.write(
+                "spectrum: port %d is already in use on this host -- set PORT to a "
+                "free port (host networking binds it directly; `ss -ltnp | grep :%d` "
+                "shows the owner)\n" % (cfg.port, cfg.port))
+            sys.stderr.flush()
+            sys.exit(1)
+        raise
+    httpd.daemon_threads = True
+
     sink = Smoother(hub, cfg.smoothing)
     reader = replay_reader if cfg.replay_file else powers_reader
     t = threading.Thread(target=reader, args=(cfg, sink), daemon=True)
     t.start()
-
-    Handler.cfg = cfg
-    Handler.hub = hub
-    httpd = ThreadingHTTPServer((cfg.bind, cfg.port), Handler)
-    httpd.daemon_threads = True
 
     def shutdown(*_):
         stop_event.set()
