@@ -27,9 +27,49 @@ STARTUP_JITTER="${STARTUP_JITTER:-15}"
 SAMPRATE="${SAMPRATE:-48000}"
 BAUD_RATE="${BAUD_RATE:-1200}"
 DIREWOLF_CONF="${DIREWOLF_CONF:-/direwolf.conf}"
+MYCALL="${MYCALL:-CHANGEME}"
 
 # Static-channel SSRC convention used by radiod: frequency in kHz.
 SSRC=$(($RXFREQ / 1000))
+
+# Compute the APRS-IS passcode for a callsign (Steve Dimse's well-known hash:
+# seed 0x73e2, XOR each character pair as high/low byte, mask to 15 bits). The
+# SSID (anything after '-') is stripped and the callsign upper-cased first.
+aprs_passcode() {
+    local call="${1%%-*}"
+    call="${call^^}"
+    local hash=$((16#73e2)) i ch
+    for (( i = 0; i < ${#call}; i++ )); do
+        printf -v ch '%d' "'${call:i:1}"
+        if (( i % 2 == 0 )); then
+            hash=$(( hash ^ (ch << 8) ))
+        else
+            hash=$(( hash ^ ch ))
+        fi
+    done
+    echo $(( hash & 0x7fff ))
+}
+
+# Render the read-only template into a writable config with the callsign and
+# passcode filled in. Direwolf has no CLI flags for MYCALL/IGLOGIN, so this has
+# to go through the config file.
+RENDERED_CONF=/tmp/direwolf.conf
+BASECALL="${MYCALL%%-*}"
+if [ -z "$MYCALL" ] || [ "$BASECALL" = "CHANGEME" ]; then
+    # No real callsign: fill MYCALL but disable the APRS-IS login so direwolf
+    # doesn't try (and fail) to authenticate with a bogus passcode.
+    echo "MYCALL is unset/CHANGEME -- APRS-IS uplink (IGLOGIN) disabled."
+    sed -e "s/__MYCALL__/${MYCALL:-N0CALL}/g" \
+        -e "s/^IGLOGIN .*/#&  # disabled: set MYCALL in docker-compose.yml/" \
+        "$DIREWOLF_CONF" > "$RENDERED_CONF"
+else
+    PASSCODE=$(aprs_passcode "$MYCALL")
+    echo "Rendering direwolf.conf for $MYCALL (APRS-IS passcode $PASSCODE)"
+    sed -e "s/__MYCALL__/${MYCALL}/g" \
+        -e "s/__PASSCODE__/${PASSCODE}/g" \
+        "$DIREWOLF_CONF" > "$RENDERED_CONF"
+fi
+DIREWOLF_CONF="$RENDERED_CONF"
 
 echo "Using SDR Centre Frequency: $RXFREQ Hz"
 echo "Using PCM stream: $SDR_DEVICE"
