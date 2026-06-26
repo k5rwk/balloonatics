@@ -40,6 +40,7 @@ x-avahi-vol: &avahi-vol
 x-horus-feeder-env: &horus-feeder-env
   DEMODSCRIPT: "docker_ka9q_audio.sh"
   RXBANDWIDTH: 22000
+  SAMPLERATE: 24000
 
 x-horus-feeder: &horus-feeder
   image: balloonatics/horusdemodlib:local
@@ -141,6 +142,36 @@ services:
       - type: 'volume'
         source: 'avahi-dbus'
         target: '/run/dbus'
+
+  # Web spectrum analyzer: drives ka9q-radio's `powers` against the SDR status
+  # group (rtl-sdr.local) and serves a live FFT + waterfall over HTTP/SSE.
+  # Uses host networking (multicast), so it binds PORT directly on the host --
+  # change PORT below to move it (default 8000). Resolves *.local via the shared
+  # avahi socket, like the horus feeders.
+  spectrum:
+    build: ./spectrum
+    image: balloonatics/spectrum:local
+    restart: 'always'
+    environment:
+      PORT: 8000
+      MCAST: rtl-sdr.local
+      SSRC: 7438
+      FREQUENCY: 432000000   # SDR center; see ka9q-radio/radiod.conf [sdr]
+      BIN_WIDTH: 1000        # Hz per FFT bin
+      BINS: 2400             # 2400 * 1000 Hz = 2.4 MHz span (full RTL passband)
+      INTERVAL: 0.025        # seconds between FFT polls = display update rate (40 Hz)
+      SMOOTHING: 0.1         # IIR time constant (s); continuous updates, ~0.1s of
+                            # integration. 0 disables; raise for a smoother trace.
+      # CROSSOVER defaults to the full span (forces powers' narrowband path so the
+      # whole two-sided spectrum is shown, not just the positive half). Override
+      # only if you know you want the wideband path. See spectrum/README.md.
+      # CROSSOVER: 2400000
+    volumes:
+      - *avahi-vol
+    depends_on:
+      - avahi
+      - ka9q-radio
+    network_mode: 'host'
 
   chasemapper:
     image: ghcr.io/projecthorus/chasemapper:latest

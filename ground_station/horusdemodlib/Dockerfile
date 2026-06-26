@@ -16,11 +16,11 @@
 # pinned tarball (same pattern upstream uses for ka9q-radio), pinned to the SAME
 # v0.6.1 release the base image is built from, so the C demod matches the lib.
 
-ARG HORUS_REF=cd3bd498e764841fbf392e3d5c56f496ee542eb1   # v0.6.1 (matches base image; for the C build)
+ARG HORUS_REF=54e5e5c905f5689e94c5877c68df633d6ced47ee
 # tcp-demod branch tip - source for the central audio-server method (server.py +
 # demod.py), kept available for A/B testing against the edge-DSP method. Pure
 # Python, reuses the existing cffi interface, so no recompile.
-ARG SERVER_REF=b472aef34a27a170e12494c106abaed95a4f48e4
+ARG SERVER_REF=54e5e5c905f5689e94c5877c68df633d6ced47ee
 ARG HORUS_IMAGE=ghcr.io/projecthorus/horusdemodlib:latest
 
 FROM debian:bookworm-slim AS demodbuild
