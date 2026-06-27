@@ -29,6 +29,15 @@ x-horus-server: &horus-server
       source: './horusdemodlib/render_user_cfg.sh'
       target: '/usr/bin/render_user_cfg.sh'
       read_only: true
+    # TEMPORARY LOCAL WORKAROUND (pending upstream fix): override the image's
+    # server.py (baked in from SERVER_REF) with a patched copy that makes the
+    # shared listening socket non-blocking, so pool workers don't wedge in a
+    # blocking accept() race and silently strand a horus channel. Drop this
+    # mount (and ./horusdemodlib/server.py) once upstream merges the fix.
+    - type: 'bind'
+      source: './horusdemodlib/server.py'
+      target: '/usr/local/lib/python3.11/dist-packages/horusdemodlib/server.py'
+      read_only: true
   network_mode: 'host'
 
 # Shared avahi-socket mount, reused by every consumer that resolves *.local names.
