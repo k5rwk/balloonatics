@@ -2,8 +2,6 @@
 
 To receive the resident payloads on the RAB balloons, a reference design is provided for you to build your own ground station. The key components are an RTL-SDR, a Raspberry Pi, and a piece of software called ka9q-radio.
 
-**THIS BRANCH HAS BEEN CREATED SPECIFICALLY FOR GPSL 2026! See `docker-compose.yml` for exact frequency assignments**
-
 When complete, this ground station will be capable of receiving 2MHz of spectrum in real-time, and running numerous slice receivers within that bandwidth. 
 
 The features included in this reference design are:
@@ -96,7 +94,7 @@ As part of the reference design, a default configuration for the ground station 
 
 ```console
 cd ~
-git clone https://github.com/k5rwk/balloonatics.git -b gpsl
+git clone https://github.com/k5rwk/balloonatics.git
 cd balloonatics/ground_station
 ```
 
@@ -180,6 +178,6 @@ git stash pop
 # Grab the latest docker images
 docker compose pull
 
-# Start the receivers
-docker compose up -d
+# Build new containers and start receivers
+docker compose up -d --build
 ```
