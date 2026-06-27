@@ -218,19 +218,19 @@ services:
     volumes:
       - ./maps/:/opt/MapTilesDownloader/output/
 
-  wenet-431200:
-    <<: *wenet
-    environment:
-      <<: [*common-variables, *wenet-env]
-      RXFREQ: 431200000
-      DEVICE: 'wenet-431200-pcm.local'
-      IMAGE_PORT: 7891
-      WEB_PORT: 5003
-    volumes:
-      - type: 'bind'
-        source: './wenet-431200/rx_images/'
-        target: '/opt/wenet/rx_images/'
-      - *avahi-vol
+  # wenet-431200:
+  #   <<: *wenet
+  #   environment:
+  #     <<: [*common-variables, *wenet-env]
+  #     RXFREQ: 431200000
+  #     DEVICE: 'wenet-431200-pcm.local'
+  #     IMAGE_PORT: 7891
+  #     WEB_PORT: 5003
+  #   volumes:
+  #     - type: 'bind'
+  #       source: './wenet-431200/rx_images/'
+  #       target: '/opt/wenet/rx_images/'
+  #     - *avahi-vol
 
   wenet-431500:
     <<: *wenet
@@ -246,19 +246,19 @@ services:
         target: '/opt/wenet/rx_images/'
       - *avahi-vol
 
-  wenet-431800:
-    <<: *wenet
-    environment:
-      <<: [*common-variables, *wenet-env]
-      RXFREQ: 431800000
-      DEVICE: 'wenet-431800-pcm.local'
-      IMAGE_PORT: 7893
-      WEB_PORT: 5005
-    volumes:
-      - type: 'bind'
-        source: './wenet-431800/rx_images/'
-        target: '/opt/wenet/rx_images/'
-      - *avahi-vol
+  # wenet-431800:
+  #   <<: *wenet
+  #   environment:
+  #     <<: [*common-variables, *wenet-env]
+  #     RXFREQ: 431800000
+  #     DEVICE: 'wenet-431800-pcm.local'
+  #     IMAGE_PORT: 7893
+  #     WEB_PORT: 5005
+  #   volumes:
+  #     - type: 'bind'
+  #       source: './wenet-431800/rx_images/'
+  #       target: '/opt/wenet/rx_images/'
+  #     - *avahi-vol
 
   # Direwolf TNC fed FM audio from ka9q-radio (pcmrecord -> direwolf stdin).
   # The channel is defined statically in ka9q-radio/radiod.conf ([aprs]) with
@@ -336,68 +336,12 @@ services:
       SDR_DEVICE: horus-432500-pcm.local
       RXFREQ: 432500000
 
-  horus-432520:
-    <<: *horus-feeder
-    environment:
-      <<: *horus-feeder-env
-      SDR_DEVICE: horus-432520-pcm.local
-      RXFREQ: 432520000
-
-  horus-432540:
-    <<: *horus-feeder
-    environment:
-      <<: *horus-feeder-env
-      SDR_DEVICE: horus-432540-pcm.local
-      RXFREQ: 432540000
-
-  horus-432560:
-    <<: *horus-feeder
-    environment:
-      <<: *horus-feeder-env
-      SDR_DEVICE: horus-432560-pcm.local
-      RXFREQ: 432560000
-
-  horus-432580:
-    <<: *horus-feeder
-    environment:
-      <<: *horus-feeder-env
-      SDR_DEVICE: horus-432580-pcm.local
-      RXFREQ: 432580000
-
   horus-432600:
     <<: *horus-feeder
     environment:
       <<: *horus-feeder-env
       SDR_DEVICE: horus-432600-pcm.local
       RXFREQ: 432600000
-
-  horus-432620:
-    <<: *horus-feeder
-    environment:
-      <<: *horus-feeder-env
-      SDR_DEVICE: horus-432620-pcm.local
-      RXFREQ: 432620000
-
-  horus-432640:
-    <<: *horus-feeder
-    environment:
-      <<: *horus-feeder-env
-      SDR_DEVICE: horus-432640-pcm.local
-      RXFREQ: 432640000
-
-  horus-432660:
-    <<: *horus-feeder
-    environment:
-      <<: *horus-feeder-env
-      SDR_DEVICE: horus-432660-pcm.local
-      RXFREQ: 432660000
-
-  horus-432680:
-    <<: *horus-feeder
-    environment:
-      <<: *horus-feeder-env
-      SDR_DEVICE: horus-432680-pcm.local
-      RXFREQ: 432680000
 
   horus-432700:
     <<: *horus-feeder
@@ -406,34 +350,6 @@ services:
       SDR_DEVICE: horus-432700-pcm.local
       RXFREQ: 432700000
 
-  horus-432720:
-    <<: *horus-feeder
-    environment:
-      <<: *horus-feeder-env
-      SDR_DEVICE: horus-432720-pcm.local
-      RXFREQ: 432720000
-
-  horus-432740:
-    <<: *horus-feeder
-    environment:
-      <<: *horus-feeder-env
-      SDR_DEVICE: horus-432740-pcm.local
-      RXFREQ: 432740000
-
-  horus-432760:
-    <<: *horus-feeder
-    environment:
-      <<: *horus-feeder-env
-      SDR_DEVICE: horus-432760-pcm.local
-      RXFREQ: 432760000
-
-  horus-432780:
-    <<: *horus-feeder
-    environment:
-      <<: *horus-feeder-env
-      SDR_DEVICE: horus-432780-pcm.local
-      RXFREQ: 432780000
-
   horus-432800:
     <<: *horus-feeder
     environment:
@@ -441,68 +357,12 @@ services:
       SDR_DEVICE: horus-432800-pcm.local
       RXFREQ: 432800000
 
-  horus-432820:
-    <<: *horus-feeder
-    environment:
-      <<: *horus-feeder-env
-      SDR_DEVICE: horus-432820-pcm.local
-      RXFREQ: 432820000
-
-  horus-432840:
-    <<: *horus-feeder
-    environment:
-      <<: *horus-feeder-env
-      SDR_DEVICE: horus-432840-pcm.local
-      RXFREQ: 432840000
-
-  horus-432860:
-    <<: *horus-feeder
-    environment:
-      <<: *horus-feeder-env
-      SDR_DEVICE: horus-432860-pcm.local
-      RXFREQ: 432860000
-
-  horus-432880:
-    <<: *horus-feeder
-    environment:
-      <<: *horus-feeder-env
-      SDR_DEVICE: horus-432880-pcm.local
-      RXFREQ: 432880000
-
   horus-432900:
     <<: *horus-feeder
     environment:
       <<: *horus-feeder-env
       SDR_DEVICE: horus-432900-pcm.local
       RXFREQ: 432900000
-
-  horus-432920:
-    <<: *horus-feeder
-    environment:
-      <<: *horus-feeder-env
-      SDR_DEVICE: horus-432920-pcm.local
-      RXFREQ: 432920000
-
-  horus-432940:
-    <<: *horus-feeder
-    environment:
-      <<: *horus-feeder-env
-      SDR_DEVICE: horus-432940-pcm.local
-      RXFREQ: 432940000
-
-  horus-432960:
-    <<: *horus-feeder
-    environment:
-      <<: *horus-feeder-env
-      SDR_DEVICE: horus-432960-pcm.local
-      RXFREQ: 432960000
-
-  horus-432980:
-    <<: *horus-feeder
-    environment:
-      <<: *horus-feeder-env
-      SDR_DEVICE: horus-432980-pcm.local
-      RXFREQ: 432980000
 
   horus-433000:
     <<: *horus-feeder
