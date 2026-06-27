@@ -6,6 +6,7 @@ FROM debian:trixie-slim AS build
 # ka9q-radio git ref to use
 #ARG REF=refs/heads/main
 ARG REF=69931b5fb4ab1476ede957951f56dbcce396303d
+# ARG REF=2d0959a4d9ad1ffc5b2ac5924264a16f1d73f6f9 # KE5GDB SDRplay AGC
 
 # Add KA9Q repo
 ADD --chmod=666 http://www.ka9q.net/debian/ka9q-sources.list /etc/apt/sources.list.d/ka9q-sources.list
@@ -73,6 +74,7 @@ RUN unzip /tmp/librtlsdr.zip -d /tmp && \
 
 # Download the source code into the build container
 ADD https://github.com/ka9q/ka9q-radio/archive/$REF.zip /tmp/ka9q-radio.zip
+# ADD https://github.com/ke5gdb/ka9q-radio/archive/$REF.zip /tmp/ka9q-radio.zip # KE5GDB SDRplay AGC
 RUN unzip /tmp/ka9q-radio.zip -d /tmp && \
   mv /tmp/ka9q-radio-* /src && \
   rm /tmp/ka9q-radio.zip

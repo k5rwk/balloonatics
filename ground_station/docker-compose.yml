@@ -1,5 +1,5 @@
 x-common-variables: &common-variables
-  MYCALL: KE5GDB
+  MYCALL: BALLOONATIC # Change me to your callsign
 
 # Common config for the Horus decoder service (horus-server). Kept as an anchor
 # so additional instances are easy to add if a host ever needs to scale out.
