@@ -1,14 +1,10 @@
 #!/usr/bin/env bash
 #
-#	Horus Binary KA9Q-Radio -> central audio server (A/B TEST METHOD)
+#	Horus Binary KA9Q-Radio -> horusdemodlib.server feeder
 #
-#   This is the *audio-server* feeder, kept for benchmarking against the edge-DSP
-#   method (docker_ka9q_server.sh). Here the feeder does NO DSP: it ships raw
-#   48 kHz IQ audio straight to a central horusdemodlib server (server.py) that
-#   demodulates in-process (multiprocessing pool) and uploads. Costs far more CPU
-#   centrally than edge-DSP (the Python/cffi demod is ~8x the native C cost), but
-#   is the simplest topology. Point the horus services at this script + run
-#   `python3 -m horusdemodlib.server` on horus-server to use it.
+#   Ships raw IQ audio from one PCM channel (via pcmrecord) to a shared
+#   horusdemodlib.server instance (server.py) that demodulates in-process
+#   (multiprocessing pool) and uploads to Sondehub.
 #
 #   Protocol (see horusdemodlib/server.py): open a TCP connection, send one JSON
 #   config line, then stream raw PCM. server.py builds one HorusLib decoder per
