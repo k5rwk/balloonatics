@@ -14,8 +14,6 @@ x-horus-server: &horus-server
     <<: *common-variables
     RADIO_COMMENT: "HorusDemodLib + ka9q-radio"
     ANTENNA_COMMENT: "1/4 wave magmount"
-    # Only Python process left in the horus path, so the glibc arena tuning
-    # lives here now (the feeders are pure pcmrecord/bash).
     MALLOC_ARENA_MAX: "2"
     MALLOC_TRIM_THRESHOLD_: "131072"
   working_dir: /tmp
@@ -29,15 +27,6 @@ x-horus-server: &horus-server
       source: './horusdemodlib/render_user_cfg.sh'
       target: '/usr/bin/render_user_cfg.sh'
       read_only: true
-    # TEMPORARY LOCAL WORKAROUND (pending upstream fix): override the image's
-    # server.py (baked in from SERVER_REF) with a patched copy that makes the
-    # shared listening socket non-blocking, so pool workers don't wedge in a
-    # blocking accept() race and silently strand a horus channel. Drop this
-    # mount (and ./horusdemodlib/server.py) once upstream merges the fix.
-    - type: 'bind'
-      source: './horusdemodlib/server.py'
-      target: '/usr/local/lib/python3.11/dist-packages/horusdemodlib/server.py'
-      read_only: true
   network_mode: 'host'
 
 # Shared avahi-socket mount, reused by every consumer that resolves *.local names.
@@ -48,15 +37,7 @@ x-avahi-vol: &avahi-vol
 
 # Common config for the 26 horus feeders. They differ ONLY in SDR_DEVICE +
 # RXFREQ (set per service); everything else is shared.
-#
-# A/B method switch (DEMODSCRIPT picks the feeder script; both are mounted):
-#   * EDGE-DSP (default): DEMODSCRIPT=docker_ka9q_server.sh -- feeder demods in
-#     native C and ships text; horus-server runs uploader_server.py. ~34% CPU.
-#   * AUDIO-SERVER (test): DEMODSCRIPT=docker_ka9q_audio.sh -- feeder ships raw IQ;
-#     horus-server runs `python3 -m horusdemodlib.server`. Change BOTH this line
-#     and the horus-server command below to switch.
 x-horus-feeder-env: &horus-feeder-env
-  DEMODSCRIPT: "docker_ka9q_audio.sh"
   RXBANDWIDTH: 22000
   SAMPLERATE: 24000
 
@@ -65,7 +46,7 @@ x-horus-feeder: &horus-feeder
   build:
     context: ./horusdemodlib
   restart: 'always'
-  command: 'bash -c $${DEMODSCRIPT}'
+  command: 'bash docker_ka9q_audio.sh'
   volumes:
     - type: 'tmpfs'
       target: '/tmp'
@@ -73,10 +54,6 @@ x-horus-feeder: &horus-feeder
       source: './horusdemodlib/user.cfg'
       target: '/user.cfg'
     - *avahi-vol
-    - type: 'bind'
-      source: './horusdemodlib/docker_ka9q_server.sh'
-      target: '/usr/bin/docker_ka9q_server.sh'
-      read_only: true
     - type: 'bind'
       source: './horusdemodlib/docker_ka9q_audio.sh'
       target: '/usr/bin/docker_ka9q_audio.sh'
@@ -324,18 +301,11 @@ services:
       - avahi
     network_mode: 'host'
 
-  # Shared horus-server. Two interchangeable methods (see the feeder A/B note
-  # above); switch the command here AND the feeders' DEMODSCRIPT together:
-  #   * EDGE-DSP (default): uploader_server.py just decodes the text the native
-  #     feeders send and uploads. One cheap instance serves all channels (~34% CPU).
-  #   * AUDIO-SERVER (test): server.py demodulates raw IQ in-process across a
-  #     multiprocessing pool and uploads. Comment/uncomment to switch.
+  # Shared horus-server. render_user_cfg.sh fills callsign/comments from
+  # MYCALL/RADIO_COMMENT/ANTENNA_COMMENT into /tmp/user.cfg, then exec's the server.
   horus-server:
     <<: *horus-server
-    # render_user_cfg.sh fills callsign/comments from MYCALL/RADIO_COMMENT/
-    # ANTENNA_COMMENT into /tmp/user.cfg, then exec's the server (-c points at it).
-    # command: '/usr/bin/render_user_cfg.sh python3 /usr/local/bin/uploader_server.py -c /tmp/user.cfg --tcp-port 4921'
-    command: '/usr/bin/render_user_cfg.sh python3 -m horusdemodlib.server -c /tmp/user.cfg --tcp-port 4921'  # AUDIO-SERVER method
+    command: '/usr/bin/render_user_cfg.sh python3 -m horusdemodlib.server -c /tmp/user.cfg --tcp-port 4921'
 
   # Receiver instance name (e.g. "horus-434200" or "wenet-443500")
   horus-432500:
