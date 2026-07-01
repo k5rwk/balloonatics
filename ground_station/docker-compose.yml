@@ -233,8 +233,8 @@ services:
   #     <<: [*common-variables, *wenet-env]
   #     RXFREQ: 431200000
   #     DEVICE: 'wenet-431200-pcm.local'
-  #     IMAGE_PORT: 7891
-  #     WEB_PORT: 5003
+  #     IMAGE_PORT: 7892 # This number must be unique per instance
+  #     WEB_PORT: 5004 # This number must be unique per instance
   #   volumes:
   #     - type: 'bind'
   #       source: './wenet-431200/rx_images/'
@@ -247,8 +247,8 @@ services:
       <<: [*common-variables, *wenet-env]
       RXFREQ: 431500000
       DEVICE: 'wenet-431500-pcm.local'
-      IMAGE_PORT: 7892
-      WEB_PORT: 5004
+      IMAGE_PORT: 7891
+      WEB_PORT: 5003
     volumes:
       - type: 'bind'
         source: './wenet-431500/rx_images/'
