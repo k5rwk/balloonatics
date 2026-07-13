@@ -7,6 +7,8 @@ x-horus-server: &horus-server
   image: balloonatics/horusdemodlib:local
   build:
     context: ./horusdemodlib
+  # Built locally; never pull the :local tag from a registry (`docker compose pull`).
+  pull_policy: build
   restart: 'always'
   environment:
     # MYCALL (callsign) + station metadata, rendered into user.cfg at startup by
@@ -45,6 +47,7 @@ x-horus-feeder: &horus-feeder
   image: balloonatics/horusdemodlib:local
   build:
     context: ./horusdemodlib
+  pull_policy: build
   restart: 'always'
   command: 'bash docker_ka9q_audio.sh'
   volumes:
@@ -150,6 +153,7 @@ services:
   spectrum:
     build: ./spectrum
     image: balloonatics/spectrum:local
+    pull_policy: build
     restart: 'always'
     environment:
       PORT: 8000
