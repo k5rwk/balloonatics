@@ -32,6 +32,23 @@ MYCALL="${MYCALL:-CHANGEME}"
 # Static-channel SSRC convention used by radiod: frequency in kHz.
 SSRC=$(($RXFREQ / 1000))
 
+# Normalise a callsign to a form APRS-IS will accept: a bare base call, or a
+# base call with a numeric SSID in 1..16. Anything else (e.g. "KE5GDB-Truck")
+# has its SSID dropped, leaving just the base call ("KE5GDB"), because APRS-IS
+# rejects logins/objects whose callsign isn't in that format.
+aprs_callsign() {
+    local raw="$1"
+    local base="${raw%%-*}"
+    if [[ "$raw" == *-* ]]; then
+        local ssid="${raw#*-}"
+        if [[ "$ssid" =~ ^([1-9]|1[0-6])$ ]]; then
+            echo "${base}-${ssid}"
+            return
+        fi
+    fi
+    echo "$base"
+}
+
 # Compute the APRS-IS passcode for a callsign (Steve Dimse's well-known hash:
 # seed 0x73e2, XOR each character pair as high/low byte, mask to 15 bits). The
 # SSID (anything after '-') is stripped and the callsign upper-cased first.
@@ -54,18 +71,25 @@ aprs_passcode() {
 # passcode filled in. Direwolf has no CLI flags for MYCALL/IGLOGIN, so this has
 # to go through the config file.
 RENDERED_CONF=/tmp/direwolf.conf
+# Callsign as APRS-IS will accept it (SSID stripped unless numeric 1..16). Both
+# the direwolf MYCALL and the IGLOGIN line are rendered from this, never the raw
+# MYCALL, so an SSID like "-Truck" can't wedge the APRS-IS login.
+APRS_CALL=$(aprs_callsign "$MYCALL")
 BASECALL="${MYCALL%%-*}"
-if [ -z "$MYCALL" ] || [ "$BASECALL" = "CHANGEME" ]; then
+if [ "$APRS_CALL" != "$MYCALL" ]; then
+    echo "Normalised callsign '$MYCALL' -> '$APRS_CALL' for APRS-IS (SSID must be numeric 1-16)."
+fi
+if [ -z "$MYCALL" ] || [ "$BASECALL" = "CHANGEME" ] || [ "$BASECALL" = "BALLOONATIC" ]; then
     # No real callsign: fill MYCALL but disable the APRS-IS login so direwolf
     # doesn't try (and fail) to authenticate with a bogus passcode.
     echo "MYCALL is unset/CHANGEME -- APRS-IS uplink (IGLOGIN) disabled."
-    sed -e "s/__MYCALL__/${MYCALL:-N0CALL}/g" \
+    sed -e "s/__MYCALL__/${APRS_CALL:-N0CALL}/g" \
         -e "s/^IGLOGIN .*/#&  # disabled: set MYCALL in docker-compose.yml/" \
         "$DIREWOLF_CONF" > "$RENDERED_CONF"
 else
-    PASSCODE=$(aprs_passcode "$MYCALL")
-    echo "Rendering direwolf.conf for $MYCALL (APRS-IS passcode $PASSCODE)"
-    sed -e "s/__MYCALL__/${MYCALL}/g" \
+    PASSCODE=$(aprs_passcode "$APRS_CALL")
+    echo "Rendering direwolf.conf for $APRS_CALL (APRS-IS passcode $PASSCODE)"
+    sed -e "s/__MYCALL__/${APRS_CALL}/g" \
         -e "s/__PASSCODE__/${PASSCODE}/g" \
         "$DIREWOLF_CONF" > "$RENDERED_CONF"
 fi
