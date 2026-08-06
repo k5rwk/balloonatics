@@ -154,6 +154,37 @@ services:
         target: '/var/run/avahi-daemon/socket'
     network_mode: 'host'
 
+  ##################### start cats
+  # CATS Igate fed FM audio from ka9q-radio (pcmrecord -> CATS stdin).
+  # The channel is defined statically in ka9q-radio/radiod.conf ([cats]) with
+  # squelch forced open, so audio streams continuously and cats doesn't EOF.
+  # SDR_DEVICE/SAMPRATE must match that channel; SSRC is derived as RXFREQ/1000.
+  # SDR_DEVICE: iq-pcm.local might be needed and correct ka9q radiod.conf also
+  cats-433108:
+    build: ./cats_igate
+    restart: 'always'
+    environment:
+      <<: *common-variables
+      # SDR_DEVICE: cats-433108.local
+      SDR_DEVICE: iq-pcm.local
+      RXFREQ: 433108
+      SAMPRATE: 48000
+      BAUD_RATE: 9600
+    volumes:
+      - type: 'bind'
+        source: './cats_igate/config.toml'
+        target: '/config.toml'
+        read_only: true
+      - type: 'bind'
+        source: './cats_igate/docker_ka9q_cats.sh'
+        target: '/usr/bin/docker_ka9q_cats.sh'
+        read_only: true
+      - type: 'bind'
+        source: '/var/run/avahi-daemon/socket'
+        target: '/var/run/avahi-daemon/socket'
+    network_mode: 'host'
+  ###################### end cats 
+
   # Receiver instance name (e.g. "horus-434200" or "wenet-443500")
   horus-432500:
     image: ghcr.io/projecthorus/horusdemodlib
@@ -819,16 +850,16 @@ services:
         read_only: true
     network_mode: 'host'
 
-  horus-433000:
+  horus-433168:
     image: ghcr.io/projecthorus/horusdemodlib
     restart: 'always'
     environment:
-      SDR_DEVICE: horus-433000-pcm.local
+      SDR_DEVICE: horus-433168-pcm.local
       STATS_OUTPUT: 0
       DECODER: horus_demod
       DEMODSCRIPT: "docker_ka9q_single.sh"
-      RXFREQ: 433000000
-      RXBANDWIDTH: 22000
+      RXFREQ: 433168000
+      RXBANDWIDTH: 18000
     command: 'bash -c $${DEMODSCRIPT}'
     volumes:
       - type: 'tmpfs'

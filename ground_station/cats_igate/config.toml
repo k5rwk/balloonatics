@@ -19,14 +19,14 @@ max_deviation = 15_000
 
 [felinet]
 address = "https://felinet.cats.radio"
-callsign = "MY_CALL"
+callsign = "KJ0RE"
 ssid = 40
 
 [felinet.beacon]
 period_seconds = 120
 icon = 0
-latitude = <FIX_THIS>
-longitude = <FIX_THIS>
+latitude = 43.711
+longitude = -98.008
 altitude = 400 # meters
 comment = "CATS Ground_Station I-gate!"
 antenna_height = 5 # meters above ground
