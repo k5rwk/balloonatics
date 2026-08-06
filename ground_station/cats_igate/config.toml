@@ -1,0 +1,33 @@
+# rtl_fm oparameters THESE ARE NOT USED FOR Ground_Station
+frequency = 433_108_000 
+device_id = "0"
+# ID of your RTL-SDR; 0 is default
+bias_t = false
+# gain = 43.4
+# dB. Uses AGC when not specified
+
+# if set to true: Must use true for Ground_station.
+#  - expects 48k samples/second, 16-bit LE IQ.
+#  - will not start rtl_fm process
+#  - will ignore above settings
+# probably don't want to touch this unless you're bypassing rtl_fm for some reason
+use_stdin = true
+
+# max FSK deviation, Hz
+# if you don't know what this means, leave it as-is
+max_deviation = 15_000
+
+[felinet]
+address = "https://felinet.cats.radio"
+callsign = "MY_CALL"
+ssid = 40
+
+[felinet.beacon]
+period_seconds = 120
+icon = 0
+latitude = <FIX_THIS>
+longitude = <FIX_THIS>
+altitude = 400 # meters
+comment = "CATS Ground_Station I-gate!"
+antenna_height = 5 # meters above ground
+antenna_gain = 2 # dBi
