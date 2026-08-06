@@ -1,5 +1,5 @@
 x-common-variables: &common-variables
-  MYCALL: CHANGEME
+  MYCALL: KJ0RE
 
 services:
 
@@ -25,8 +25,8 @@ services:
   chasemapper:
     image: ghcr.io/projecthorus/chasemapper:latest
     restart: 'always'
-    devices:
-      - "/dev/ttyACM0:/dev/ttyUSB0"
+    # devices:
+      # - "/dev/ttyACM0:/dev/ttyUSB0"
     volumes:
       - type: 'bind'
         source: './chasemapper/horusmapper.cfg'
