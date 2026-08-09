@@ -850,28 +850,3 @@ services:
         read_only: true
     network_mode: 'host'
 
-  horus-433168:
-    image: ghcr.io/projecthorus/horusdemodlib
-    restart: 'always'
-    environment:
-      SDR_DEVICE: horus-433168-pcm.local
-      STATS_OUTPUT: 0
-      DECODER: horus_demod
-      DEMODSCRIPT: "docker_ka9q_single.sh"
-      RXFREQ: 433168000
-      RXBANDWIDTH: 18000
-    command: 'bash -c $${DEMODSCRIPT}'
-    volumes:
-      - type: 'tmpfs'
-        target: '/tmp'
-      - type: 'bind'
-        source: './horusdemodlib/user.cfg'
-        target: '/user.cfg'
-      - type: 'bind'
-        source: '/var/run/avahi-daemon/socket'
-        target: '/var/run/avahi-daemon/socket'
-      - type: 'bind'
-        source: './horusdemodlib/docker_ka9q_single.sh'
-        target: '/usr/bin/docker_ka9q_single.sh'
-        read_only: true
-    network_mode: 'host'
