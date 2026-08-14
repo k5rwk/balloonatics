@@ -236,6 +236,17 @@ services:
         target: '/opt/wenet/rx_images/'
       - *avahi-vol
 
+  wenet-forwarder:
+    build: https://github.com/ke5gdb/wenet_telemetry_forwarder.git
+    restart: 'always'
+    environment:
+      <<: *common-variables
+      WENET_TELEMETRY_URL: https://tlm.koe.ng/api/v1/ingest
+      WENET_SPOOL_DIR: /spool
+    volumes:
+      - './wenet-forwarder-spool:/spool'
+    network_mode: 'host'
+
   # wenet-431800:
   #   <<: *wenet
   #   environment:
