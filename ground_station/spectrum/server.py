@@ -27,6 +27,9 @@ Configuration is entirely via environment variables (see docker-compose.yml):
   BINS         number of FFT bins                            (default: [sdr]
                                                               samprate/BIN_WIDTH, else 2400)
   INTERVAL     seconds between powers polls = display rate   (default 0.025)
+  AVERAGE      FFTs radiod averages into each frame (-a)     (default 8)
+  TIMEOUT      seconds powers waits for a response (-T)      (default 0.25)
+               before re-polling; powers' own default is 1 s
 
 Tuning (center frequency, span, status group) is read from radiod.conf so it is
 not duplicated in compose; any of MCAST/FREQUENCY/BINS still overrides if set.
@@ -34,10 +37,8 @@ not duplicated in compose; any of MCAST/FREQUENCY/BINS still overrides if set.
                browser's client-side smoothing (0 = off).
                Just a starting value for the UI control now;
                the smoothing itself runs in the browser.
-  CROSSOVER    rbw threshold (Hz) below which powers uses     (default = span:
-               narrowband/two-sided mode; default forces it   BIN_WIDTH*BINS)
-               so the full spectrum is shown, not just the
-               positive half (see note below)
+  CROSSOVER    rbw threshold (Hz) at/below which powers uses (default unset ->
+               the narrowband path (see note below)           powers' own 200 Hz)
   LOG_DIR      directory for spectrum CSV logs               (default /data)
   LOG_INTERVAL if >0, auto-start logging at this period (s)  (default 0)
   SOURCE       optional `powers -o` source name/address      (default unset)
@@ -51,12 +52,17 @@ back through the same UI with REPLAY_FILE=<that file>.
 
 Note on CROSSOVER: radiod's spectrum pseudo-demod has two implementations and
 picks between them by comparing the resolution bandwidth to a "crossover" rbw:
-rbw > crossover uses the wideband path (reads the front-end FFT), rbw <= crossover
-uses the narrowband path (a complex downconverter). On a complex (I/Q) front end
-like the RTL-SDR the wideband path only fills the positive-frequency half of the
-span -- the lower half comes back as zeros (a flat line). We default CROSSOVER to
-the full span so rbw <= crossover always holds and powers stays on the narrowband
-path, giving a correct two-sided spectrum.
+rbw > crossover uses the wideband path (an FFT off the raw A/D input), rbw <=
+crossover uses the narrowband path (a full complex downconverter at bin_count*rbw,
+run per poll). Wideband is much the cheaper of the two.
+
+We used to force CROSSOVER to the full span to stay on the narrowband path,
+because on a complex (I/Q) front end like the RTL-SDR the wideband path filled
+only the positive-frequency half of the span -- the lower half came back as zeros.
+That bin-mapping bug is fixed as of the ka9q-radio ref this image pins, so
+CROSSOVER is left unset and powers' own default (200 Hz) applies: at BIN_WIDTH
+1000 that selects wideband, while a fine BIN_WIDTH (<= 200) still drops to
+narrowband. Set CROSSOVER = BIN_WIDTH*BINS to force the old behaviour.
 """
 
 import errno
@@ -143,6 +149,8 @@ class Config:
         self.ssrc = env("SSRC", "7438")
         self.bin_width = env("BIN_WIDTH", "1000")
         self.interval = float(env("INTERVAL", "0.025"))
+        self.average = max(1, int(float(env("AVERAGE", "8"))))
+        self.timeout = max(0.05, float(env("TIMEOUT", "0.25")))
 
         # Tuning is derived from radiod.conf (single source of truth) unless an
         # env var overrides it -- so the SDR center/width never has to be copied
@@ -165,9 +173,9 @@ class Config:
         else:
             self.bins = "2400"
         self.smoothing = max(0.0, float(env("SMOOTHING", "0.2")))   # UI default tau
-        # Default crossover to the full span so powers stays on the narrowband
-        # (two-sided) path; see the module docstring.
-        self.crossover = env("CROSSOVER", str(int(float(self.bin_width) * int(self.bins))))
+        # Unset by default: defer to powers' own crossover, which picks the cheap
+        # wideband path at our BIN_WIDTH; see the module docstring.
+        self.crossover = env("CROSSOVER")
         self.log_dir = env("LOG_DIR", "/data")
         self.log_interval = float(env("LOG_INTERVAL", "0"))
         self.source = env("SOURCE")
@@ -186,9 +194,12 @@ class Config:
             "-w", str(self.bin_width),
             "-b", str(self.bins),
             "-i", str(self.interval),
-            "-C", str(self.crossover),   # force narrowband/two-sided spectrum
+            "-a", str(self.average),     # radiod-side averaging (SPECTRUM_AVG)
+            "-T", str(self.timeout),     # cap the stall from a dropped response
             "-c", "-1",            # run forever
         ]
+        if self.crossover:
+            argv += ["-C", str(self.crossover)]
         if self.source:
             argv += ["-o", self.source]
         argv.append(self.mcast)

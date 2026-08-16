@@ -18,7 +18,7 @@ FROM debian:trixie-slim AS build
 
 # Pinned to the same ka9q-radio ref the SDR image builds from, so powers speaks
 # the exact status/TLV protocol radiod is emitting.
-ARG REF=69931b5fb4ab1476ede957951f56dbcce396303d
+ARG REF=16b60f2a685d5b559ef262ef4774ab2d552f1691
 
 RUN apt-get update && \
     apt-get install -y --no-install-recommends \

@@ -16,8 +16,8 @@ radiod  ──status multicast──>  powers  ──stdout──>  server.py  �
                                                                           markers)
 ```
 
-The raw per-frame FFTs go to the browser, which does the IIR smoothing, rendering,
-markers and readouts. The server can also log the raw frames to CSV for replay.
+The frames go to the browser, which does the IIR smoothing, rendering, markers and
+readouts. The server can also log the frames to CSV for replay.
 
 ## Running
 
@@ -55,6 +55,8 @@ All via environment variables (set in `docker-compose.yml`):
 | `PORT`        | `8000`             | HTTP port (bound directly on the host)                 |
 | `BIN_WIDTH`   | `1000`             | resolution bandwidth per bin, Hz (span = samprate/this)|
 | `INTERVAL`    | `0.025`            | seconds between FFT polls = display update rate        |
+| `AVERAGE`     | `8`                | FFTs radiod averages into each frame (`powers -a`)     |
+| `TIMEOUT`     | `0.25`             | seconds `powers` waits for a response (`powers -T`)    |
 | `SMOOTHING`   | `0.2`              | **default** IIR τ (s) for the browser (adjust live)    |
 | `LOG_DIR`     | `/data`            | directory for spectrum CSV logs (mount a volume)       |
 | `LOG_INTERVAL`| `0`                | if >0, auto-start logging at this period (s)           |
@@ -63,7 +65,7 @@ All via environment variables (set in `docker-compose.yml`):
 | `BINS`        | _samprate/BIN_WIDTH_ | number of FFT bins — override                        |
 | `MCAST`       | _radiod.conf_      | radiod status multicast group — override               |
 | `SSRC`        | `7438`             | SSRC for the transient spectrum channel                |
-| `CROSSOVER`   | _span_             | rbw threshold for narrowband mode (see note below)     |
+| `CROSSOVER`   | _unset_            | rbw threshold for narrowband mode (see note below)     |
 | `SOURCE`      | _unset_            | optional `powers -o` source name/address               |
 | `POWERS_BIN`  | `powers`           | path to the powers binary                              |
 | `POWERS_ARGS` | _unset_            | full override of the powers args (after the binary)    |
@@ -116,10 +118,9 @@ directly replayable here.
 
 ## Integration period (SMOOTHING / τ)
 
-Each `powers` frame is a *single* FFT block (~1 ms of samples for the default
-config) — `powers` doesn't expose radiod's `SPECTRUM_AVG`, so it never integrates
-server-side, and a raw trace is noisy. The **browser** integrates with an IIR
-(exponential) filter, per bin, in **linear power** (unbiased; smoothing dB
+radiod integrates `AVERAGE` FFTs into each frame (`powers -a`, i.e. `SPECTRUM_AVG`),
+which is cheaper than polling that many times as fast. The **browser** then adds an
+IIR (exponential) filter, per bin, in **linear power** (unbiased; smoothing dB
 directly would skew toward the nulls):
 
 ```
@@ -132,25 +133,31 @@ the frame rate / jitter. Unlike boxcar averaging, this **decouples integration f
 update rate**: the display refreshes every `INTERVAL` (40 Hz by default) but each
 frame carries ~`tau` of integration, cutting the noise like averaging ~`tau/INTERVAL`
 independent FFTs (≈ 8 at the defaults, measured ~2.8× / √8). Raise τ for a smoother,
-slower-reacting trace; set it to `0` to show the raw per-frame FFT. Doing the
-smoothing client-side means it is adjustable live and the **logs capture raw data**.
+slower-reacting trace; set it to `0` to show what radiod sent verbatim. Doing the
+smoothing client-side means it is adjustable live and the **logs capture the
+unsmoothed frames**.
 
 Because the same smoothed stream drives the waterfall, a brief signal leaves a
 short (~`tau`) vertical tail — usually helpful for catching weak carriers, and
 shortened by lowering `tau`.
 
-## Why CROSSOVER defaults to the full span
+## Why CROSSOVER is left unset
 
 radiod's spectrum pseudo-demod has two implementations and chooses between them by
 comparing the resolution bandwidth to a *crossover* rbw: `rbw > crossover` uses the
-**wideband** path (it reads the front-end FFT directly); `rbw <= crossover` uses the
-**narrowband** path (a complex downconverter). On a complex (I/Q) front end like the
-RTL-SDR the wideband path only fills the *positive*-frequency half of the requested
-span — the lower half comes back as zeros, i.e. a flat line below the center
-frequency. We therefore default `CROSSOVER` to the full span (`BIN_WIDTH * BINS`) so
-`rbw <= crossover` always holds and `powers` stays on the narrowband path, producing
-a correct two-sided spectrum. Override it only if you specifically want the wideband
-path.
+**wideband** path (an FFT off the raw A/D input); `rbw <= crossover` uses the
+**narrowband** path (a full complex downconverter at `bin_count * rbw`, run per
+poll). Wideband is much the cheaper of the two.
+
+We used to force `CROSSOVER` to the full span to stay on the narrowband path,
+because on a complex (I/Q) front end like the RTL-SDR the wideband path only filled
+the *positive*-frequency half of the requested span — the lower half came back as
+zeros, i.e. a flat line below the center frequency. That bin-mapping bug is fixed
+in the ka9q-radio ref this image pins, so `CROSSOVER` is now left unset and
+`powers`' own default (200 Hz) applies: at the default `BIN_WIDTH` of 1000 Hz that
+selects wideband, while a fine `BIN_WIDTH` (≤ 200) still drops to narrowband, which
+is the right path for a narrow span. Set `CROSSOVER = BIN_WIDTH * BINS` to force the
+old always-narrowband behaviour.
 
 ## Notes
 
