@@ -26,14 +26,10 @@ Configuration is entirely via environment variables (see docker-compose.yml):
   BIN_WIDTH    resolution bandwidth per bin, Hz              (default 1000)
   BINS         number of FFT bins                            (default: [sdr]
                                                               samprate/BIN_WIDTH, else 2400)
-  INTERVAL     seconds between powers polls = display rate   (default 0.1)
-               NOTE: also sets radiod's channel lifetime --
-               see the note below before lowering it.
+  INTERVAL     seconds between powers polls = display rate   (default 0.025)
   AVERAGE      FFTs radiod averages into each frame (-a)     (default 8)
   TIMEOUT      seconds powers waits for a response (-T)      (default 0.25)
-               before re-polling; its own default is 1 s,
-               which turns one lost datagram into a 1 s
-               freeze. See the note below.
+               before re-polling; powers' own default is 1 s
 
 Tuning (center frequency, span, status group) is read from radiod.conf so it is
 not duplicated in compose; any of MCAST/FREQUENCY/BINS still overrides if set.
@@ -41,10 +37,8 @@ not duplicated in compose; any of MCAST/FREQUENCY/BINS still overrides if set.
                browser's client-side smoothing (0 = off).
                Just a starting value for the UI control now;
                the smoothing itself runs in the browser.
-  CROSSOVER    rbw threshold (Hz) at/below which powers uses  (default unset ->
-               the narrowband path instead of the cheaper      powers' own 200 Hz)
-               wideband one; unset defers to powers
-               (see note below)
+  CROSSOVER    rbw threshold (Hz) at/below which powers uses (default unset ->
+               the narrowband path (see note below)           powers' own 200 Hz)
   LOG_DIR      directory for spectrum CSV logs               (default /data)
   LOG_INTERVAL if >0, auto-start logging at this period (s)  (default 0)
   SOURCE       optional `powers -o` source name/address      (default unset)
@@ -56,59 +50,19 @@ not duplicated in compose; any of MCAST/FREQUENCY/BINS still overrides if set.
 Logs are written in the exact rtl_power/powers CSV format, so a log can be played
 back through the same UI with REPLAY_FILE=<that file>.
 
-Note on INTERVAL: powers derives radiod's channel self-destruct timer from it,
-sending LIFETIME = INTERVAL * 2 * 50 *frames* of 20 ms each -- i.e. a lifetime of
-just 2*INTERVAL seconds, truncated to whole frames. If a poll ever slips past
-that, radiod tears the transient spectrum channel down (filter output, FFTW plan,
-ring buffer, window) and the next poll rebuilds all of it; the rebuilt channel
-also answers the first poll with no BIN_DATA, so powers spins re-sending setup
-commands until it settles. At the old INTERVAL of 0.025 that budget was
-0.025*2*50 = 2.5 -> 2 frames = 40 ms against a ~25 ms poll gap, which made the
-display glitch and burned CPU. 0.1 gives 10 frames = 200 ms, ~2x the poll gap.
-Don't drop INTERVAL below ~0.05 without re-checking this. Integration is better
-bought with AVERAGE (below) than with a faster poll.
-
-Note on AVERAGE: newer powers exposes radiod's SPECTRUM_AVG as -a, so radiod
-averages N FFTs from its ring buffer into each response. This is strictly cheaper
-than polling N times as fast, and it is why INTERVAL can be 4x slower than it was
-without losing noise performance. The browser's IIR (SMOOTHING) still runs on top
-and paces off the *measured* frame interval, so it adapts to the slower rate on
-its own. Keep AVERAGE modest: powers splits the request into `pieces` when
-average/rbw exceeds 80 ms and its normalization of that split is wrong (it scales
-by 1/pieces using an integer divide while still asking radiod for the full
-average), so multi-piece results come back several dB high.
-
-Note on TIMEOUT and frame size: each response carries BINS float32 values as
-BIN_DATA in ONE UDP datagram -- at the default 2400 bins that is 9600 bytes, which
-the IP layer must fragment into ~7 packets on a 1500-MTU interface. Losing any one
-fragment discards the whole frame, and powers then waits out its full -T timeout
-before re-polling. With its 1 s default that is a one-second frozen display per
-loss, which looks like a hard stall followed by a burst rather than a dropped
-frame. TIMEOUT caps that; it does not stop the loss.
-
-To test whether fragmentation is actually the culprit, run diag.py with BINS
-small enough to fit one datagram (BINS=300 -> 1200 bytes) and see if the stalls
-disappear. If they do, the real fixes are to keep the payload under the MTU or to
-put radiod's multicast on an interface with a large MTU -- radiod.conf has a
-commented-out `iface = lo` (loopback MTU is 65536), which works only because every
-consumer in this stack is host-networked on the same box, and would affect every
-other radiod stream too, so change it deliberately.
-
 Note on CROSSOVER: radiod's spectrum pseudo-demod has two implementations and
 picks between them by comparing the resolution bandwidth to a "crossover" rbw:
-rbw > crossover uses the wideband path (an FFT straight off the raw A/D input
-buffer), rbw <= crossover uses the narrowband path (a full complex downconverter
-at bin_count*rbw, run per poll). Wideband is much the cheaper of the two.
+rbw > crossover uses the wideband path (an FFT off the raw A/D input), rbw <=
+crossover uses the narrowband path (a full complex downconverter at bin_count*rbw,
+run per poll). Wideband is much the cheaper of the two.
 
 We used to force CROSSOVER to the full span to stay on the narrowband path,
 because on a complex (I/Q) front end like the RTL-SDR the wideband path filled
-only the positive-frequency half of the span -- the lower half came back as zeros,
-a flat line below center. That bin-mapping bug is fixed as of the ka9q-radio ref
-this image pins, so CROSSOVER is now left unset and powers' own default (200 Hz)
-applies: at our BIN_WIDTH of 1000 that selects wideband, while asking for fine
-resolution (BIN_WIDTH <= 200) still drops to narrowband, which is the right path
-for a narrow span. Set CROSSOVER explicitly to override -- CROSSOVER =
-BIN_WIDTH*BINS restores the old always-narrowband behaviour.
+only the positive-frequency half of the span -- the lower half came back as zeros.
+That bin-mapping bug is fixed as of the ka9q-radio ref this image pins, so
+CROSSOVER is left unset and powers' own default (200 Hz) applies: at BIN_WIDTH
+1000 that selects wideband, while a fine BIN_WIDTH (<= 200) still drops to
+narrowband. Set CROSSOVER = BIN_WIDTH*BINS to force the old behaviour.
 """
 
 import errno
@@ -194,14 +148,8 @@ class Config:
         self.bind = env("BIND", "0.0.0.0")
         self.ssrc = env("SSRC", "7438")
         self.bin_width = env("BIN_WIDTH", "1000")
-        self.interval = float(env("INTERVAL", "0.1"))
-        # radiod-side integration (powers -a). See the AVERAGE note in the module
-        # docstring for why this is preferred over a shorter INTERVAL.
+        self.interval = float(env("INTERVAL", "0.025"))
         self.average = max(1, int(float(env("AVERAGE", "8"))))
-        # powers waits this long for a response before giving up and re-polling.
-        # Its own default is 1 s, so a single dropped status datagram costs a
-        # full second of frozen display; 0.25 s still leaves ~6x margin over
-        # radiod's response latency (a 20 ms block boundary plus the poll).
         self.timeout = max(0.05, float(env("TIMEOUT", "0.25")))
 
         # Tuning is derived from radiod.conf (single source of truth) unless an
@@ -225,9 +173,8 @@ class Config:
         else:
             self.bins = "2400"
         self.smoothing = max(0.0, float(env("SMOOTHING", "0.2")))   # UI default tau
-        # Unset by default: defer to powers' own crossover (200 Hz), which picks
-        # the cheap wideband path at our BIN_WIDTH and the narrowband path if you
-        # ask for fine resolution. See the module docstring.
+        # Unset by default: defer to powers' own crossover, which picks the cheap
+        # wideband path at our BIN_WIDTH; see the module docstring.
         self.crossover = env("CROSSOVER")
         self.log_dir = env("LOG_DIR", "/data")
         self.log_interval = float(env("LOG_INTERVAL", "0"))
@@ -258,15 +205,6 @@ class Config:
         argv.append(self.mcast)
         return argv
 
-    POWERS_DEFAULT_CROSSOVER = 200.0   # powers' own default when -C is omitted
-
-    def spectrum_path(self):
-        """Which radiod implementation this config selects: rbw > crossover picks
-        the wideband path (an FFT straight off the raw A/D), rbw <= crossover the
-        narrowband one (a full complex downconverter per poll)."""
-        xover = float(self.crossover) if self.crossover else self.POWERS_DEFAULT_CROSSOVER
-        return "wideband" if float(self.bin_width) > xover else "narrowband"
-
     def public(self):
         """Config fields the browser may want for labelling/init."""
         return {
@@ -276,8 +214,6 @@ class Config:
             "bin_width": float(self.bin_width),
             "bins": int(self.bins),
             "interval": self.interval,
-            "average": self.average,
-            "path": self.spectrum_path(),
             "smoothing": self.smoothing,
             "replay": bool(self.replay_file),
             "logging": True,
@@ -730,21 +666,9 @@ def main():
         "spectrum: tuning from %s: center %.3f MHz, %.2f MHz span, %s bins @ %s Hz, status=%s\n"
         % (cfg.tuned_from, float(cfg.frequency) / 1e6, span_mhz, cfg.bins,
            cfg.bin_width, cfg.mcast))
-    # powers sends radiod LIFETIME = interval*2*50 frames of 20 ms (see docstring).
-    lifetime_frames = int(cfg.interval * 2 * 50)
     sys.stderr.write(
-        "spectrum: polling @ %.0f ms, radiod averaging %d FFTs/frame on the %s "
-        "path, channel lifetime %d frames (%.0f ms); client smoothing default "
-        "tau=%.3fs\n"
-        % (cfg.interval * 1000, cfg.average, cfg.spectrum_path(), lifetime_frames,
-           lifetime_frames * 20, cfg.smoothing))
-    if lifetime_frames < 4:
-        sys.stderr.write(
-            "spectrum: WARNING: INTERVAL=%.3f leaves radiod only %d frame(s) of "
-            "channel lifetime; the spectrum channel will be torn down and rebuilt "
-            "whenever a poll slips, causing glitchy output and high CPU. Raise "
-            "INTERVAL to >= 0.05 (0.1 recommended) and buy integration with "
-            "AVERAGE instead.\n" % (cfg.interval, lifetime_frames))
+        "spectrum: polling @ %.0f ms; client smoothing default tau=%.3fs\n"
+        % (cfg.interval * 1000, cfg.smoothing))
     sys.stderr.write("spectrum: serving on http://%s:%d/\n" % (cfg.bind, cfg.port))
     sys.stderr.flush()
     try:

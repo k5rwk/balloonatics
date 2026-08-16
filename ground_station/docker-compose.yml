@@ -158,23 +158,15 @@ services:
     environment:
       PORT: 8000
       BIN_WIDTH: 1000        # Hz per FFT bin (resolution); span = samprate / this
-      # INTERVAL also sets radiod's channel lifetime: powers sends
-      # LIFETIME = INTERVAL*2*50 frames of 20 ms. Below ~0.05 the transient
-      # spectrum channel gets reaped and rebuilt whenever a poll slips -> glitchy
-      # display + high CPU. Buy integration with AVERAGE, not a faster poll.
-      INTERVAL: 0.1          # seconds between FFT polls = display update rate (10 Hz)
+      INTERVAL: 0.025        # seconds between FFT polls = display update rate (40 Hz)
       AVERAGE: 8             # FFTs radiod averages into each frame (powers -a)
-      # Each response is BINS*4 bytes of BIN_DATA in one UDP datagram (9600 B at
-      # 2400 bins = ~7 IP fragments); losing one fragment loses the frame, and
-      # powers then stalls for TIMEOUT. Its own default is 1 s, hence 0.25 here.
       TIMEOUT: 0.25          # seconds powers waits for a response (powers -T)
       SMOOTHING: 0.2         # default browser IIR tau (s); adjustable live in the UI
       LOG_DIR: /data         # where spectrum CSV logs are written
       LOG_INTERVAL: 0        # >0 (seconds) auto-starts logging at boot
       # FREQUENCY / BINS / MCAST auto-derive from radiod.conf below; set them here
       # only to override. CROSSOVER is left unset so powers' own default picks the
-      # cheap wideband path at this BIN_WIDTH; set CROSSOVER to BIN_WIDTH*BINS to
-      # force the old narrowband downconverter. See spectrum/README.md.
+      # cheap wideband path at this BIN_WIDTH; see spectrum/README.md.
     volumes:
       - *avahi-vol
       - ./ka9q-radio/radiod.conf:/etc/radio/radiod.conf:ro
