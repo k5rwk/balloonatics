@@ -58,6 +58,7 @@ All via environment variables (set in `docker-compose.yml`):
 | `BIN_WIDTH`   | `1000`             | resolution bandwidth per bin, Hz (span = samprate/this)|
 | `INTERVAL`    | `0.1`              | seconds between FFT polls = display update rate — also sets radiod's channel lifetime, [see below](#interval-sets-radiods-channel-lifetime) |
 | `AVERAGE`     | `8`                | FFTs radiod averages into each frame (`powers -a`)     |
+| `TIMEOUT`     | `0.25`             | seconds `powers` waits for a response (`powers -T`) — [see below](#stalls-frame-size-and-ip-fragmentation) |
 | `SMOOTHING`   | `0.2`              | **default** IIR τ (s) for the browser (adjust live)    |
 | `LOG_DIR`     | `/data`            | directory for spectrum CSV logs (mount a volume)       |
 | `LOG_INTERVAL`| `0`                | if >0, auto-start logging at this period (s)           |
@@ -176,6 +177,44 @@ the unsmoothed frames** (already `AVERAGE`-averaged by radiod).
 Because the same smoothed stream drives the waterfall, a brief signal leaves a
 short (~`tau`) vertical tail — usually helpful for catching weak carriers, and
 shortened by lowering `tau`.
+
+## Stalls, frame size and IP fragmentation
+
+Symptom: the frame counter freezes for whole seconds at a time (`/status` shows
+`last_frame_age` climbing to several seconds), then a burst of frames arrives.
+
+Each response carries `BINS` float32 values as `BIN_DATA` in a **single UDP
+datagram**. At the default 2400 bins that is 9600 bytes, which the IP layer has to
+fragment into ~7 packets on a 1500-MTU interface. **Losing any one fragment
+discards the entire frame**, and `powers` then waits out its `-T` timeout before
+re-polling. Its own default is 1 second, so one lost fragment = one second of
+frozen display — which reads as a hard stall and a burst, not as a dropped frame.
+
+`TIMEOUT` caps the cost of a loss. **It does not stop the loss.** To find out
+whether fragmentation is really what is happening, use [`diag.py`](diag.py), which
+runs the exact `powers` command the server would and reports the gap distribution:
+
+```sh
+docker compose exec spectrum python3 /app/diag.py                  # as configured
+docker compose exec -e BINS=300 spectrum python3 /app/diag.py      # fits one datagram
+```
+
+If the stalls vanish at `BINS=300` (1200 bytes, no fragmentation) the diagnosis is
+confirmed. `diag.py` also flags gaps that land within 0.15 s of a whole second,
+which means the response never arrived rather than merely arriving late. Cross-check
+against the host's counters over the same window:
+
+```sh
+nstat -az | grep -iE 'reasm|frag'          # ReasmFails / ReasmTimeout climbing
+netstat -su | grep -iE 'reassembl|receive errors'
+```
+
+Real fixes, if confirmed, are to keep the payload under the MTU (fewer `BINS`, i.e.
+coarser resolution or a narrower span) or to put radiod's multicast on a large-MTU
+interface — [`radiod.conf`](../ka9q-radio/radiod.conf) has a commented-out
+`iface = lo`, and loopback's MTU is 65536. That only works because every consumer in
+this stack is host-networked on the same box, and it moves **every** radiod stream,
+not just this one, so make that change deliberately rather than as a spectrum tweak.
 
 ## The wideband vs narrowband path
 

@@ -30,6 +30,10 @@ Configuration is entirely via environment variables (see docker-compose.yml):
                NOTE: also sets radiod's channel lifetime --
                see the note below before lowering it.
   AVERAGE      FFTs radiod averages into each frame (-a)     (default 8)
+  TIMEOUT      seconds powers waits for a response (-T)      (default 0.25)
+               before re-polling; its own default is 1 s,
+               which turns one lost datagram into a 1 s
+               freeze. See the note below.
 
 Tuning (center frequency, span, status group) is read from radiod.conf so it is
 not duplicated in compose; any of MCAST/FREQUENCY/BINS still overrides if set.
@@ -73,6 +77,22 @@ its own. Keep AVERAGE modest: powers splits the request into `pieces` when
 average/rbw exceeds 80 ms and its normalization of that split is wrong (it scales
 by 1/pieces using an integer divide while still asking radiod for the full
 average), so multi-piece results come back several dB high.
+
+Note on TIMEOUT and frame size: each response carries BINS float32 values as
+BIN_DATA in ONE UDP datagram -- at the default 2400 bins that is 9600 bytes, which
+the IP layer must fragment into ~7 packets on a 1500-MTU interface. Losing any one
+fragment discards the whole frame, and powers then waits out its full -T timeout
+before re-polling. With its 1 s default that is a one-second frozen display per
+loss, which looks like a hard stall followed by a burst rather than a dropped
+frame. TIMEOUT caps that; it does not stop the loss.
+
+To test whether fragmentation is actually the culprit, run diag.py with BINS
+small enough to fit one datagram (BINS=300 -> 1200 bytes) and see if the stalls
+disappear. If they do, the real fixes are to keep the payload under the MTU or to
+put radiod's multicast on an interface with a large MTU -- radiod.conf has a
+commented-out `iface = lo` (loopback MTU is 65536), which works only because every
+consumer in this stack is host-networked on the same box, and would affect every
+other radiod stream too, so change it deliberately.
 
 Note on CROSSOVER: radiod's spectrum pseudo-demod has two implementations and
 picks between them by comparing the resolution bandwidth to a "crossover" rbw:
@@ -178,6 +198,11 @@ class Config:
         # radiod-side integration (powers -a). See the AVERAGE note in the module
         # docstring for why this is preferred over a shorter INTERVAL.
         self.average = max(1, int(float(env("AVERAGE", "8"))))
+        # powers waits this long for a response before giving up and re-polling.
+        # Its own default is 1 s, so a single dropped status datagram costs a
+        # full second of frozen display; 0.25 s still leaves ~6x margin over
+        # radiod's response latency (a 20 ms block boundary plus the poll).
+        self.timeout = max(0.05, float(env("TIMEOUT", "0.25")))
 
         # Tuning is derived from radiod.conf (single source of truth) unless an
         # env var overrides it -- so the SDR center/width never has to be copied
@@ -223,6 +248,7 @@ class Config:
             "-b", str(self.bins),
             "-i", str(self.interval),
             "-a", str(self.average),     # radiod-side averaging (SPECTRUM_AVG)
+            "-T", str(self.timeout),     # cap the stall from a dropped response
             "-c", "-1",            # run forever
         ]
         if self.crossover:

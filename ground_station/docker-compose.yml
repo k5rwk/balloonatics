@@ -164,6 +164,10 @@ services:
       # display + high CPU. Buy integration with AVERAGE, not a faster poll.
       INTERVAL: 0.1          # seconds between FFT polls = display update rate (10 Hz)
       AVERAGE: 8             # FFTs radiod averages into each frame (powers -a)
+      # Each response is BINS*4 bytes of BIN_DATA in one UDP datagram (9600 B at
+      # 2400 bins = ~7 IP fragments); losing one fragment loses the frame, and
+      # powers then stalls for TIMEOUT. Its own default is 1 s, hence 0.25 here.
+      TIMEOUT: 0.25          # seconds powers waits for a response (powers -T)
       SMOOTHING: 0.2         # default browser IIR tau (s); adjustable live in the UI
       LOG_DIR: /data         # where spectrum CSV logs are written
       LOG_INTERVAL: 0        # >0 (seconds) auto-starts logging at boot
