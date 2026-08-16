@@ -168,8 +168,9 @@ services:
       LOG_DIR: /data         # where spectrum CSV logs are written
       LOG_INTERVAL: 0        # >0 (seconds) auto-starts logging at boot
       # FREQUENCY / BINS / MCAST auto-derive from radiod.conf below; set them here
-      # only to override. CROSSOVER defaults to the full span (forces powers'
-      # narrowband path -> full two-sided spectrum); see spectrum/README.md.
+      # only to override. CROSSOVER is left unset so powers' own default picks the
+      # cheap wideband path at this BIN_WIDTH; set CROSSOVER to BIN_WIDTH*BINS to
+      # force the old narrowband downconverter. See spectrum/README.md.
     volumes:
       - *avahi-vol
       - ./ka9q-radio/radiod.conf:/etc/radio/radiod.conf:ro

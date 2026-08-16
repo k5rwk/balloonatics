@@ -56,7 +56,7 @@ All via environment variables (set in `docker-compose.yml`):
 |---------------|--------------------|--------------------------------------------------------|
 | `PORT`        | `8000`             | HTTP port (bound directly on the host)                 |
 | `BIN_WIDTH`   | `1000`             | resolution bandwidth per bin, Hz (span = samprate/this)|
-| `INTERVAL`    | `0.1`              | seconds between FFT polls = display update rate — also sets radiod's channel lifetime, [see below](#dont-lower-interval-it-sets-radiods-channel-lifetime) |
+| `INTERVAL`    | `0.1`              | seconds between FFT polls = display update rate — also sets radiod's channel lifetime, [see below](#interval-sets-radiods-channel-lifetime) |
 | `AVERAGE`     | `8`                | FFTs radiod averages into each frame (`powers -a`)     |
 | `SMOOTHING`   | `0.2`              | **default** IIR τ (s) for the browser (adjust live)    |
 | `LOG_DIR`     | `/data`            | directory for spectrum CSV logs (mount a volume)       |
@@ -66,7 +66,7 @@ All via environment variables (set in `docker-compose.yml`):
 | `BINS`        | _samprate/BIN_WIDTH_ | number of FFT bins — override                        |
 | `MCAST`       | _radiod.conf_      | radiod status multicast group — override               |
 | `SSRC`        | `7438`             | SSRC for the transient spectrum channel                |
-| `CROSSOVER`   | _span_             | rbw threshold for narrowband mode (see note below)     |
+| `CROSSOVER`   | _unset_ (→ `powers`' 200 Hz) | rbw threshold for the narrowband path ([see below](#the-wideband-vs-narrowband-path)) |
 | `SOURCE`      | _unset_            | optional `powers -o` source name/address               |
 | `POWERS_BIN`  | `powers`           | path to the powers binary                              |
 | `POWERS_ARGS` | _unset_            | full override of the powers args (after the binary)    |
@@ -117,7 +117,7 @@ docker run --rm -p 8000:8000 \
 Because logs and `powers` share one CSV format, anything the analyzer records is
 directly replayable here.
 
-## Don't lower `INTERVAL` — it sets radiod's channel lifetime
+## INTERVAL sets radiod's channel lifetime
 
 `powers` derives radiod's channel self-destruct timer from the poll interval,
 sending `LIFETIME = INTERVAL * 2 * 50` **frames of 20 ms each** — a lifetime of
@@ -177,18 +177,42 @@ Because the same smoothed stream drives the waterfall, a brief signal leaves a
 short (~`tau`) vertical tail — usually helpful for catching weak carriers, and
 shortened by lowering `tau`.
 
-## Why CROSSOVER defaults to the full span
+## The wideband vs narrowband path
 
 radiod's spectrum pseudo-demod has two implementations and chooses between them by
-comparing the resolution bandwidth to a *crossover* rbw: `rbw > crossover` uses the
-**wideband** path (it reads the front-end FFT directly); `rbw <= crossover` uses the
-**narrowband** path (a complex downconverter). On a complex (I/Q) front end like the
-RTL-SDR the wideband path only fills the *positive*-frequency half of the requested
-span — the lower half comes back as zeros, i.e. a flat line below the center
-frequency. We therefore default `CROSSOVER` to the full span (`BIN_WIDTH * BINS`) so
-`rbw <= crossover` always holds and `powers` stays on the narrowband path, producing
-a correct two-sided spectrum. Override it only if you specifically want the wideband
-path.
+comparing the resolution bandwidth to a *crossover* rbw:
+
+| | selected when | how it works | cost |
+|---|---|---|---|
+| **wideband** | `rbw > crossover` | windowed FFT of size `samprate/rbw` straight off the raw A/D input buffer | one FFT per averaged frame |
+| **narrowband** | `rbw <= crossover` | a full complex downconverter at `bin_count*rbw` feeding a ring buffer, then the FFT | downconverter + filter + ring fill, **per poll** |
+
+At our settings the narrowband path was running a 2.4 MHz complex downconverter
+every poll — the dominant cost in the whole analyzer, and its
+`create_filter_output` is also what made the channel-lifetime churn described above
+so expensive.
+
+We used to force it anyway, by setting `CROSSOVER` to the full span, because on a
+complex (I/Q) front end like the RTL-SDR the wideband path filled only the
+*positive*-frequency half of the span — the lower half came back as zeros, a flat
+line below center. **That bin-mapping bug is fixed** in the ka9q-radio ref this
+image now pins; the fix is in `wideband_poll()` in `spectrum.c`, annotated
+`(fixed by KE5GDB)` — it's the patch from this project, upstreamed.
+
+So `CROSSOVER` is now left unset and `powers`' own default of 200 Hz applies:
+
+- at the default `BIN_WIDTH` of 1000 Hz → **wideband** (cheap, full two-sided span)
+- ask for fine resolution (`BIN_WIDTH` ≤ 200) → **narrowband**, which is the right
+  path for a narrow span
+
+Set `CROSSOVER` explicitly to override; `CROSSOVER = BIN_WIDTH * BINS` restores the
+old always-narrowband behaviour. The active path is printed at startup and shown in
+the UI's header line, so you can confirm which one you're on.
+
+Two cosmetic differences to expect on the wideband path: the narrowband
+downconverter trimmed a 400 Hz margin for its filter skirts, so you now see the
+front end's own roll-off at the span edges, and the RTL-SDR's DC spike sits at
+center rather than being filtered out.
 
 ## Notes
 

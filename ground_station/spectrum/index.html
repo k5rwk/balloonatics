@@ -703,6 +703,8 @@ function setTuning(cfg) {
   const sp = (cfg.bin_width * cfg.bins / 1e6).toFixed(2);
   els.tuning.textContent =
     `${c} MHz center · ${sp} MHz span · ${(1 / cfg.interval).toFixed(0)} Hz · ${cfg.mcast}`
+    + (cfg.average > 1 ? ` · ×${cfg.average}` : "")
+    + (cfg.path ? ` · ${cfg.path}` : "")
     + (cfg.tuned_from ? ` · ${cfg.tuned_from}` : "")
     + (cfg.replay ? " · REPLAY" : "");
   if (cfg.smoothing != null && !tauTouched) {

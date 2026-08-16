@@ -37,10 +37,10 @@ not duplicated in compose; any of MCAST/FREQUENCY/BINS still overrides if set.
                browser's client-side smoothing (0 = off).
                Just a starting value for the UI control now;
                the smoothing itself runs in the browser.
-  CROSSOVER    rbw threshold (Hz) below which powers uses     (default = span:
-               narrowband/two-sided mode; default forces it   BIN_WIDTH*BINS)
-               so the full spectrum is shown, not just the
-               positive half (see note below)
+  CROSSOVER    rbw threshold (Hz) at/below which powers uses  (default unset ->
+               the narrowband path instead of the cheaper      powers' own 200 Hz)
+               wideband one; unset defers to powers
+               (see note below)
   LOG_DIR      directory for spectrum CSV logs               (default /data)
   LOG_INTERVAL if >0, auto-start logging at this period (s)  (default 0)
   SOURCE       optional `powers -o` source name/address      (default unset)
@@ -76,12 +76,19 @@ average), so multi-piece results come back several dB high.
 
 Note on CROSSOVER: radiod's spectrum pseudo-demod has two implementations and
 picks between them by comparing the resolution bandwidth to a "crossover" rbw:
-rbw > crossover uses the wideband path (reads the front-end FFT), rbw <= crossover
-uses the narrowband path (a complex downconverter). On a complex (I/Q) front end
-like the RTL-SDR the wideband path only fills the positive-frequency half of the
-span -- the lower half comes back as zeros (a flat line). We default CROSSOVER to
-the full span so rbw <= crossover always holds and powers stays on the narrowband
-path, giving a correct two-sided spectrum.
+rbw > crossover uses the wideband path (an FFT straight off the raw A/D input
+buffer), rbw <= crossover uses the narrowband path (a full complex downconverter
+at bin_count*rbw, run per poll). Wideband is much the cheaper of the two.
+
+We used to force CROSSOVER to the full span to stay on the narrowband path,
+because on a complex (I/Q) front end like the RTL-SDR the wideband path filled
+only the positive-frequency half of the span -- the lower half came back as zeros,
+a flat line below center. That bin-mapping bug is fixed as of the ka9q-radio ref
+this image pins, so CROSSOVER is now left unset and powers' own default (200 Hz)
+applies: at our BIN_WIDTH of 1000 that selects wideband, while asking for fine
+resolution (BIN_WIDTH <= 200) still drops to narrowband, which is the right path
+for a narrow span. Set CROSSOVER explicitly to override -- CROSSOVER =
+BIN_WIDTH*BINS restores the old always-narrowband behaviour.
 """
 
 import errno
@@ -193,9 +200,10 @@ class Config:
         else:
             self.bins = "2400"
         self.smoothing = max(0.0, float(env("SMOOTHING", "0.2")))   # UI default tau
-        # Default crossover to the full span so powers stays on the narrowband
-        # (two-sided) path; see the module docstring.
-        self.crossover = env("CROSSOVER", str(int(float(self.bin_width) * int(self.bins))))
+        # Unset by default: defer to powers' own crossover (200 Hz), which picks
+        # the cheap wideband path at our BIN_WIDTH and the narrowband path if you
+        # ask for fine resolution. See the module docstring.
+        self.crossover = env("CROSSOVER")
         self.log_dir = env("LOG_DIR", "/data")
         self.log_interval = float(env("LOG_INTERVAL", "0"))
         self.source = env("SOURCE")
@@ -215,13 +223,23 @@ class Config:
             "-b", str(self.bins),
             "-i", str(self.interval),
             "-a", str(self.average),     # radiod-side averaging (SPECTRUM_AVG)
-            "-C", str(self.crossover),   # force narrowband/two-sided spectrum
             "-c", "-1",            # run forever
         ]
+        if self.crossover:
+            argv += ["-C", str(self.crossover)]
         if self.source:
             argv += ["-o", self.source]
         argv.append(self.mcast)
         return argv
+
+    POWERS_DEFAULT_CROSSOVER = 200.0   # powers' own default when -C is omitted
+
+    def spectrum_path(self):
+        """Which radiod implementation this config selects: rbw > crossover picks
+        the wideband path (an FFT straight off the raw A/D), rbw <= crossover the
+        narrowband one (a full complex downconverter per poll)."""
+        xover = float(self.crossover) if self.crossover else self.POWERS_DEFAULT_CROSSOVER
+        return "wideband" if float(self.bin_width) > xover else "narrowband"
 
     def public(self):
         """Config fields the browser may want for labelling/init."""
@@ -233,6 +251,7 @@ class Config:
             "bins": int(self.bins),
             "interval": self.interval,
             "average": self.average,
+            "path": self.spectrum_path(),
             "smoothing": self.smoothing,
             "replay": bool(self.replay_file),
             "logging": True,
@@ -688,9 +707,10 @@ def main():
     # powers sends radiod LIFETIME = interval*2*50 frames of 20 ms (see docstring).
     lifetime_frames = int(cfg.interval * 2 * 50)
     sys.stderr.write(
-        "spectrum: polling @ %.0f ms, radiod averaging %d FFTs/frame, channel "
-        "lifetime %d frames (%.0f ms); client smoothing default tau=%.3fs\n"
-        % (cfg.interval * 1000, cfg.average, lifetime_frames,
+        "spectrum: polling @ %.0f ms, radiod averaging %d FFTs/frame on the %s "
+        "path, channel lifetime %d frames (%.0f ms); client smoothing default "
+        "tau=%.3fs\n"
+        % (cfg.interval * 1000, cfg.average, cfg.spectrum_path(), lifetime_frames,
            lifetime_frames * 20, cfg.smoothing))
     if lifetime_frames < 4:
         sys.stderr.write(
