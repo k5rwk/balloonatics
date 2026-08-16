@@ -47,7 +47,7 @@ RUN apt-get update && \
 
 # Install SDRplay API: headers for build-time plugin compilation; library and
 # service daemon are copied to the runtime image via /usr/local/lib and /opt/sdrplay_api.
-ADD https://www.sdrplay.com/software/SDRplay_RSP_API-Linux-3.15.2.run /tmp/
+COPY SDRplay_RSP_API-Linux-3.15.2.run /tmp/
 RUN ARCH=$(dpkg --print-architecture) && \
     sh /tmp/SDRplay_RSP_API-Linux-3.15.2.run --noexec --target /tmp/sdrplay_pkg && \
     cp /tmp/sdrplay_pkg/${ARCH}/libsdrplay_api.so.3.15 /usr/local/lib/ && \
