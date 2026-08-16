@@ -11,13 +11,15 @@ and a scrolling waterfall on a `<canvas>` with no external JS.
 
 ```
 radiod  ──status multicast──>  powers  ──stdout──>  server.py  ──SSE──>  browser
-        (rtl-sdr.local)        (FFT bins, dB)    (parse + fan-out raw)   (IIR smooth,
-                                                  + optional CSV log)     trace, waterfall,
-                                                                          markers)
+(avg AVERAGE FFTs   (rtl-sdr.local)   (FFT bins, dB)  (parse + fan-out)   (IIR smooth,
+ per response)                                     + optional CSV log)     trace, waterfall,
+                                                                           markers)
 ```
 
-The raw per-frame FFTs go to the browser, which does the IIR smoothing, rendering,
-markers and readouts. The server can also log the raw frames to CSV for replay.
+radiod integrates `AVERAGE` FFTs into each response; the server passes those frames
+through untouched, and the browser adds a live-adjustable IIR stage on top before
+rendering the trace, waterfall, markers and readouts. The server logs the frames as
+they arrive from `powers` (pre-IIR) for replay.
 
 ## Running
 
@@ -54,7 +56,8 @@ All via environment variables (set in `docker-compose.yml`):
 |---------------|--------------------|--------------------------------------------------------|
 | `PORT`        | `8000`             | HTTP port (bound directly on the host)                 |
 | `BIN_WIDTH`   | `1000`             | resolution bandwidth per bin, Hz (span = samprate/this)|
-| `INTERVAL`    | `0.025`            | seconds between FFT polls = display update rate        |
+| `INTERVAL`    | `0.1`              | seconds between FFT polls = display update rate — also sets radiod's channel lifetime, [see below](#dont-lower-interval-it-sets-radiods-channel-lifetime) |
+| `AVERAGE`     | `8`                | FFTs radiod averages into each frame (`powers -a`)     |
 | `SMOOTHING`   | `0.2`              | **default** IIR τ (s) for the browser (adjust live)    |
 | `LOG_DIR`     | `/data`            | directory for spectrum CSV logs (mount a volume)       |
 | `LOG_INTERVAL`| `0`                | if >0, auto-start logging at this period (s)           |
@@ -114,13 +117,47 @@ docker run --rm -p 8000:8000 \
 Because logs and `powers` share one CSV format, anything the analyzer records is
 directly replayable here.
 
-## Integration period (SMOOTHING / τ)
+## Don't lower `INTERVAL` — it sets radiod's channel lifetime
 
-Each `powers` frame is a *single* FFT block (~1 ms of samples for the default
-config) — `powers` doesn't expose radiod's `SPECTRUM_AVG`, so it never integrates
-server-side, and a raw trace is noisy. The **browser** integrates with an IIR
-(exponential) filter, per bin, in **linear power** (unbiased; smoothing dB
-directly would skew toward the nulls):
+`powers` derives radiod's channel self-destruct timer from the poll interval,
+sending `LIFETIME = INTERVAL * 2 * 50` **frames of 20 ms each** — a lifetime of
+`2 * INTERVAL` seconds, truncated to whole frames. If a poll ever slips past that
+budget, radiod tears the transient spectrum channel down (filter output, FFTW
+plan, ring buffer, window) and the next poll rebuilds all of it; the rebuilt
+channel then answers its first poll with no `BIN_DATA`, so `powers` spins
+re-sending setup commands at 10 ms intervals until it settles.
+
+At the old `INTERVAL` of `0.025` that budget was `0.025*2*50 = 2.5` → **2 frames
+= 40 ms**, against a poll gap of ~25 ms plus round trip — so the channel was
+being destroyed and reconstructed constantly, which showed up as a glitchy,
+inconsistent display and a large CPU hit. `0.1` gives 10 frames = 200 ms, about
+2× the poll gap. **Don't go below ~`0.05`** without re-checking this; the server
+logs a warning at startup if the lifetime drops under 4 frames.
+
+This only became a problem in newer ka9q-radio: older `powers` never sent
+`LIFETIME` at all, and since `lifestart` is only ever assigned from that command,
+the transient channel was effectively immortal.
+
+If you want a smoother trace, raise `AVERAGE` — not the poll rate.
+
+## Integration period (AVERAGE, SMOOTHING / τ)
+
+Integration happens in two places, and the cheap one is server-side.
+
+**radiod (`AVERAGE` → `powers -a` → `SPECTRUM_AVG`)** averages N consecutive FFTs
+out of its ring buffer into each response. This costs one poll instead of N, so
+it is strictly cheaper than raising the frame rate, and it is why `INTERVAL` can
+be 4× slower than it used to be without losing noise performance.
+
+> Keep `AVERAGE` modest. `powers` splits the request into `pieces` when
+> `average/rbw` exceeds 80 ms, and its normalization of that split is wrong — it
+> scales by `1/pieces` using an integer divide while still asking radiod for the
+> full `average` — so multi-piece results come back several dB high. At the
+> default `BIN_WIDTH` of 1000 Hz, stay at or below ~16.
+
+**The browser** then integrates what arrives with an IIR (exponential) filter,
+per bin, in **linear power** (unbiased; smoothing dB directly would skew toward
+the nulls):
 
 ```
 ema += alpha * (x - ema),   alpha = 1 - e^(-dt/tau)
@@ -128,12 +165,13 @@ ema += alpha * (x - ema),   alpha = 1 - e^(-dt/tau)
 
 `tau` is the **τ (s)** control (initialised from `SMOOTHING`) and `dt` is the
 *measured* interval between frames, so the amount of integration is independent of
-the frame rate / jitter. Unlike boxcar averaging, this **decouples integration from
-update rate**: the display refreshes every `INTERVAL` (40 Hz by default) but each
-frame carries ~`tau` of integration, cutting the noise like averaging ~`tau/INTERVAL`
-independent FFTs (≈ 8 at the defaults, measured ~2.8× / √8). Raise τ for a smoother,
-slower-reacting trace; set it to `0` to show the raw per-frame FFT. Doing the
-smoothing client-side means it is adjustable live and the **logs capture raw data**.
+the frame rate / jitter — the browser adapted to the slower `INTERVAL` on its own,
+with no change needed. Unlike boxcar averaging, this **decouples integration from
+update rate**: the display refreshes every `INTERVAL` (10 Hz by default) but each
+frame carries ~`tau` of integration on top of radiod's `AVERAGE`. Raise τ for a
+smoother, slower-reacting trace; set it to `0` to show what radiod sent verbatim.
+Doing this stage client-side means it is adjustable live, and the **logs capture
+the unsmoothed frames** (already `AVERAGE`-averaged by radiod).
 
 Because the same smoothed stream drives the waterfall, a brief signal leaves a
 short (~`tau`) vertical tail — usually helpful for catching weak carriers, and
@@ -157,7 +195,10 @@ path.
 - The Docker image compiles **only** `powers` from the pinned ka9q-radio source,
   so it is tiny: `powers` links just `libbsd`/`librt`/`libm`/`libpthread`, and the
   runtime adds python3 + `libnss-mdns`. Keep the build `ARG REF` in the
-  [`Dockerfile`](Dockerfile) in step with the SDR image's ref so the status/TLV
-  protocol matches what radiod emits.
+  [`Dockerfile`](Dockerfile) in step with [the SDR image's
+  ref](../ka9q-radio/Dockerfile) so the status/TLV protocol matches what radiod
+  emits. This is not cosmetic — the two have drifted in ways that break silently
+  or loudly: newer radiod asserts `spectrum.fft_avg >= 1` in `narrowband_poll()`,
+  and an older `powers` never sends `SPECTRUM_AVG` at all.
 - The server is stdlib-only (no pip dependencies); the HTTP server, SSE transport
   and parser are all in `server.py`.

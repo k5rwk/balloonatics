@@ -17,8 +17,11 @@
 FROM debian:trixie-slim AS build
 
 # Pinned to the same ka9q-radio ref the SDR image builds from, so powers speaks
-# the exact status/TLV protocol radiod is emitting.
-ARG REF=69931b5fb4ab1476ede957951f56dbcce396303d
+# the exact status/TLV protocol radiod is emitting. Keep this in step with
+# ../ka9q-radio/Dockerfile -- a mismatch is not merely cosmetic: newer radiod
+# asserts spectrum.fft_avg >= 1 in narrowband_poll(), and an older powers never
+# sends SPECTRUM_AVG at all.
+ARG REF=16b60f2a685d5b559ef262ef4774ab2d552f1691
 
 RUN apt-get update && \
     apt-get install -y --no-install-recommends \

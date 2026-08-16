@@ -26,7 +26,10 @@ Configuration is entirely via environment variables (see docker-compose.yml):
   BIN_WIDTH    resolution bandwidth per bin, Hz              (default 1000)
   BINS         number of FFT bins                            (default: [sdr]
                                                               samprate/BIN_WIDTH, else 2400)
-  INTERVAL     seconds between powers polls = display rate   (default 0.025)
+  INTERVAL     seconds between powers polls = display rate   (default 0.1)
+               NOTE: also sets radiod's channel lifetime --
+               see the note below before lowering it.
+  AVERAGE      FFTs radiod averages into each frame (-a)     (default 8)
 
 Tuning (center frequency, span, status group) is read from radiod.conf so it is
 not duplicated in compose; any of MCAST/FREQUENCY/BINS still overrides if set.
@@ -48,6 +51,28 @@ not duplicated in compose; any of MCAST/FREQUENCY/BINS still overrides if set.
 
 Logs are written in the exact rtl_power/powers CSV format, so a log can be played
 back through the same UI with REPLAY_FILE=<that file>.
+
+Note on INTERVAL: powers derives radiod's channel self-destruct timer from it,
+sending LIFETIME = INTERVAL * 2 * 50 *frames* of 20 ms each -- i.e. a lifetime of
+just 2*INTERVAL seconds, truncated to whole frames. If a poll ever slips past
+that, radiod tears the transient spectrum channel down (filter output, FFTW plan,
+ring buffer, window) and the next poll rebuilds all of it; the rebuilt channel
+also answers the first poll with no BIN_DATA, so powers spins re-sending setup
+commands until it settles. At the old INTERVAL of 0.025 that budget was
+0.025*2*50 = 2.5 -> 2 frames = 40 ms against a ~25 ms poll gap, which made the
+display glitch and burned CPU. 0.1 gives 10 frames = 200 ms, ~2x the poll gap.
+Don't drop INTERVAL below ~0.05 without re-checking this. Integration is better
+bought with AVERAGE (below) than with a faster poll.
+
+Note on AVERAGE: newer powers exposes radiod's SPECTRUM_AVG as -a, so radiod
+averages N FFTs from its ring buffer into each response. This is strictly cheaper
+than polling N times as fast, and it is why INTERVAL can be 4x slower than it was
+without losing noise performance. The browser's IIR (SMOOTHING) still runs on top
+and paces off the *measured* frame interval, so it adapts to the slower rate on
+its own. Keep AVERAGE modest: powers splits the request into `pieces` when
+average/rbw exceeds 80 ms and its normalization of that split is wrong (it scales
+by 1/pieces using an integer divide while still asking radiod for the full
+average), so multi-piece results come back several dB high.
 
 Note on CROSSOVER: radiod's spectrum pseudo-demod has two implementations and
 picks between them by comparing the resolution bandwidth to a "crossover" rbw:
@@ -142,7 +167,10 @@ class Config:
         self.bind = env("BIND", "0.0.0.0")
         self.ssrc = env("SSRC", "7438")
         self.bin_width = env("BIN_WIDTH", "1000")
-        self.interval = float(env("INTERVAL", "0.025"))
+        self.interval = float(env("INTERVAL", "0.1"))
+        # radiod-side integration (powers -a). See the AVERAGE note in the module
+        # docstring for why this is preferred over a shorter INTERVAL.
+        self.average = max(1, int(float(env("AVERAGE", "8"))))
 
         # Tuning is derived from radiod.conf (single source of truth) unless an
         # env var overrides it -- so the SDR center/width never has to be copied
@@ -186,6 +214,7 @@ class Config:
             "-w", str(self.bin_width),
             "-b", str(self.bins),
             "-i", str(self.interval),
+            "-a", str(self.average),     # radiod-side averaging (SPECTRUM_AVG)
             "-C", str(self.crossover),   # force narrowband/two-sided spectrum
             "-c", "-1",            # run forever
         ]
@@ -203,6 +232,7 @@ class Config:
             "bin_width": float(self.bin_width),
             "bins": int(self.bins),
             "interval": self.interval,
+            "average": self.average,
             "smoothing": self.smoothing,
             "replay": bool(self.replay_file),
             "logging": True,
@@ -655,9 +685,20 @@ def main():
         "spectrum: tuning from %s: center %.3f MHz, %.2f MHz span, %s bins @ %s Hz, status=%s\n"
         % (cfg.tuned_from, float(cfg.frequency) / 1e6, span_mhz, cfg.bins,
            cfg.bin_width, cfg.mcast))
+    # powers sends radiod LIFETIME = interval*2*50 frames of 20 ms (see docstring).
+    lifetime_frames = int(cfg.interval * 2 * 50)
     sys.stderr.write(
-        "spectrum: polling @ %.0f ms; client smoothing default tau=%.3fs\n"
-        % (cfg.interval * 1000, cfg.smoothing))
+        "spectrum: polling @ %.0f ms, radiod averaging %d FFTs/frame, channel "
+        "lifetime %d frames (%.0f ms); client smoothing default tau=%.3fs\n"
+        % (cfg.interval * 1000, cfg.average, lifetime_frames,
+           lifetime_frames * 20, cfg.smoothing))
+    if lifetime_frames < 4:
+        sys.stderr.write(
+            "spectrum: WARNING: INTERVAL=%.3f leaves radiod only %d frame(s) of "
+            "channel lifetime; the spectrum channel will be torn down and rebuilt "
+            "whenever a poll slips, causing glitchy output and high CPU. Raise "
+            "INTERVAL to >= 0.05 (0.1 recommended) and buy integration with "
+            "AVERAGE instead.\n" % (cfg.interval, lifetime_frames))
     sys.stderr.write("spectrum: serving on http://%s:%d/\n" % (cfg.bind, cfg.port))
     sys.stderr.flush()
     try:

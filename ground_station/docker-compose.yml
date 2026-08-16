@@ -158,7 +158,12 @@ services:
     environment:
       PORT: 8000
       BIN_WIDTH: 1000        # Hz per FFT bin (resolution); span = samprate / this
-      INTERVAL: 0.025        # seconds between FFT polls = display update rate (40 Hz)
+      # INTERVAL also sets radiod's channel lifetime: powers sends
+      # LIFETIME = INTERVAL*2*50 frames of 20 ms. Below ~0.05 the transient
+      # spectrum channel gets reaped and rebuilt whenever a poll slips -> glitchy
+      # display + high CPU. Buy integration with AVERAGE, not a faster poll.
+      INTERVAL: 0.1          # seconds between FFT polls = display update rate (10 Hz)
+      AVERAGE: 8             # FFTs radiod averages into each frame (powers -a)
       SMOOTHING: 0.2         # default browser IIR tau (s); adjustable live in the UI
       LOG_DIR: /data         # where spectrum CSV logs are written
       LOG_INTERVAL: 0        # >0 (seconds) auto-starts logging at boot
